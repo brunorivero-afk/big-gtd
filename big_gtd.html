@@ -36,7 +36,8 @@ body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--
 .nav-btn{background:var(--acc);color:rgba(255,255,255,.68);border:none;border-bottom:3px solid transparent;border-radius:var(--r) var(--r) 0 0;font-size:11px;font-weight:600;padding:6px 12px;cursor:pointer;white-space:nowrap;transition:color .12s,background .12s;display:flex;align-items:center;gap:4px;}
 .nav-btn:hover:not(.active){color:rgba(255,255,255,.9);}
 .nav-btn.active{background:color-mix(in srgb,var(--acc) 78%,#000);color:#fff;border-bottom-color:rgba(255,255,255,.7);}
-.ibadge{background:var(--ph);color:#fff;font-size:9px;font-weight:800;border-radius:10px;padding:1px 4px;min-width:15px;text-align:center;display:none;}
+.ibadge{color:#FFD54F;font-weight:800;font-size:inherit;}
+#nb-inbox{padding:7px 16px;font-size:12px;}
 
 /* LEGEND + ACTIONS BAR */
 .legend{display:flex;align-items:center;gap:10px;flex-wrap:nowrap;padding:0 16px;height:38px;background:var(--surf);border-bottom:1px solid var(--brd);}
@@ -580,9 +581,8 @@ function renderStats() {
      <span>Abertas: <b>${op}</b></span>`;
 }
 function updateInboxBadge() {
-  const n=inboxItems.filter(i=>i.status==='pending').length;
-  const b=document.getElementById('ibadge');
-  b.textContent=n; b.style.display=n>0?'':'none';
+  const n = inboxItems.filter(i=>i.status==='pending').length;
+  document.getElementById('ibadge').textContent = n > 0 ? ` (${n})` : '';
 }
 function render() { renderKanban(); renderStats(); updateInboxBadge(); }
 
