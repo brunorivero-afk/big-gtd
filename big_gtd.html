@@ -101,6 +101,7 @@ body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--
 .cact{flex:1;background:var(--raised);border:1px solid var(--brd);border-radius:3px;color:var(--t2);font-size:10px;font-weight:700;padding:5px 3px;cursor:pointer;text-align:center;transition:background .12s,border-color .12s,color .12s;}
 .cact-ok:hover{border-color:var(--pl);color:var(--pl);background:rgba(52,211,153,.1);}
 .cact-def:hover{border-color:var(--pm);color:var(--pm);background:rgba(245,158,11,.1);}
+.cact-del:hover{border-color:var(--ph);color:var(--ph);background:rgba(242,72,60,.1);}
 .dgr{position:absolute;top:9px;right:9px;display:flex;flex-direction:column;gap:2px;opacity:0;transition:opacity .12s;pointer-events:none;}
 .card:hover .dgr{opacity:.22;}
 .dgr span{display:block;width:11px;height:1.5px;background:var(--t2);border-radius:1px;}
@@ -596,11 +597,12 @@ function cardHTML(t) {
   const done   = t.col==='concluido';
   const hasFoot= t.person||(t.due&&t.due!=='Hoje');
   const renew  = done&&t.rec ? `<button class="btn-renew" onclick="renewTask(event,'${esc(t.id)}')">↻ Renovar para Hoje</button>` : '';
-  const acts   = !done ? `
+  const acts = `
     <div class="card-acts">
-      <button class="cact cact-ok" onclick="quickComplete(event,'${esc(t.id)}')">✓ Concluir</button>
-      ${t.col==='hoje'?`<button class="cact cact-def" onclick="quickDefer(event,'${esc(t.id)}')">↪ Adiar</button>`:''}
-    </div>` : '';
+      ${!done ? `<button class="cact cact-ok" onclick="quickComplete(event,'${esc(t.id)}')">✓ Concluir</button>` : ''}
+      ${!done && t.col==='hoje' ? `<button class="cact cact-def" onclick="quickDefer(event,'${esc(t.id)}')">↪ Adiar</button>` : ''}
+      <button class="cact cact-del" onclick="quickDelete(event,'${esc(t.id)}')">✕</button>
+    </div>`;
   return `
   <div class="card${done?' done':''}" data-id="${esc(t.id)}" data-cat="${esc(t.cat)}"
        draggable="true" onclick="openModal('${esc(t.id)}')"
@@ -904,6 +906,12 @@ function quickDefer(e,id) {
   e.stopPropagation();
   const t=tasks.find(t=>t.id===id); if(!t) return;
   t.col='semana'; saveData(); render(); if(currentView==='foco') renderFoco(); toast('↪ Adiada para Esta Semana');
+}
+function quickDelete(e,id) {
+  e.stopPropagation();
+  if (!confirm('Excluir esta tarefa?')) return;
+  tasks = tasks.filter(t=>t.id!==id);
+  saveData(); render(); if(currentView==='foco') renderFoco(); toast('Tarefa excluída');
 }
 function renewTask(e,id) {
   e.stopPropagation();
