@@ -322,6 +322,7 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:2px;}
   <div class="logo" onclick="gotoView('kanban')" title="Início — quadro principal">Big <em>GTD</em></div>
   <div class="hdr-stats" id="stats"></div>
   <div class="nav-group">
+    <button class="nav-btn" id="nb-kanban"    onclick="gotoView('kanban')">◼ Quadro</button>
     <button class="nav-btn" id="nb-foco"      onclick="gotoView('foco')">☀ Foco</button>
     <button class="nav-btn" id="nb-dashboard" onclick="gotoView('dashboard')">📊 Dados</button>
     <button class="nav-btn" id="nb-formview"  onclick="gotoView('form-view')">🔗 Formulário</button>
@@ -456,7 +457,7 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:2px;}
 // ── CONFIG ────────────────────────────────────────────────────────────
 const CFG = {
   owner:    'Bruno',
-  whatsapp: '',      // ex: '+5511999999999'
+  whatsapp: '+5521981678093',
   baseUrl:  'https://brunorivero-afk.github.io/big-gtd/big_gtd.html',
 };
 
@@ -540,7 +541,7 @@ function processUrlParams() {
 
 // ── VIEW MANAGEMENT ───────────────────────────────────────────────────
 const VIEWS = ['kanban','foco','inbox','dashboard','form-view'];
-const NAV   = {foco:'nb-foco',inbox:'nb-inbox',dashboard:'nb-dashboard','form-view':'nb-formview'};
+const NAV   = {kanban:'nb-kanban',foco:'nb-foco',inbox:'nb-inbox',dashboard:'nb-dashboard','form-view':'nb-formview'};
 
 function gotoView(v) {
   currentView = v;
