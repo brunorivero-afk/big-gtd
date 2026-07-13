@@ -96,6 +96,8 @@ body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--
 .cpersn{display:flex;align-items:center;gap:3px;font-size:11px;color:var(--t2);}
 .av{width:17px;height:17px;border-radius:50%;background:var(--acc-dim);border:1px solid var(--acc);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:var(--acc);flex-shrink:0;}
 .cdue{font-size:10px;color:var(--t3);}
+.card-link{display:inline-block;margin-top:5px;font-size:10px;color:var(--acc);text-decoration:none;word-break:break-all;}
+.card-link:hover{text-decoration:underline;}
 .card-acts{display:flex;gap:4px;margin-top:7px;opacity:0;transition:opacity .15s;pointer-events:none;}
 .card:hover .card-acts{opacity:1;pointer-events:auto;}
 .cact{flex:1;background:var(--raised);border:1px solid var(--brd);border-radius:3px;color:var(--t2);font-size:10px;font-weight:700;padding:5px 3px;cursor:pointer;text-align:center;transition:background .12s,border-color .12s,color .12s;}
@@ -443,6 +445,10 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:2px;}
         <label>Tag / Projeto</label>
         <input type="text" id="f-tag" placeholder="ex: BIDATX, IA Hub, Família">
       </div>
+      <div class="field">
+        <label>Link (opcional)</label>
+        <input type="text" id="f-link" placeholder="ex: https://mercadolivre.com.br/produto...">
+      </div>
     </div>
     <div class="modal-ftr">
       <button class="btn-del"    id="btn-del"  onclick="deleteTask()" style="display:none">Excluir</button>
@@ -477,14 +483,14 @@ let dragId=null, expandedCols=new Set();
 let extLinkForCopy='';
 
 // ── PERSISTENCE ───────────────────────────────────────────────────────
-const saveData  = ()=> localStorage.setItem('bigtd_v1',      JSON.stringify(tasks));
-const saveInbox = ()=> localStorage.setItem('bigtd_inbox_v1', JSON.stringify(inboxItems));
+const saveData  = ()=> localStorage.setItem('bigtd_v2',      JSON.stringify(tasks));
+const saveInbox = ()=> localStorage.setItem('bigtd_inbox_v2', JSON.stringify(inboxItems));
 
 function loadData() {
-  const rt = localStorage.getItem('bigtd_v1');
-  tasks = rt ? JSON.parse(rt) : seedTasks();
+  const rt = localStorage.getItem('bigtd_v2');
+  tasks = rt ? JSON.parse(rt) : [];
   if (!rt) saveData();
-  const ri = localStorage.getItem('bigtd_inbox_v1');
+  const ri = localStorage.getItem('bigtd_inbox_v2');
   inboxItems = ri ? JSON.parse(ri) : [];
 }
 
@@ -618,6 +624,7 @@ function cardHTML(t) {
       ${t.tag?`<span class="chip ch-t">${esc(t.tag)}</span>`:''}
     </div>
     ${hasFoot?`<div class="cfot"><div class="cpersn">${av(t.person)}<span>${esc(t.person||'')}</span></div><div class="cdue">${esc(t.due||'')}</div></div>`:''}
+    ${t.link?`<a class="card-link" href="${esc(t.link)}" target="_blank" onclick="event.stopPropagation()">🔗 Ver link</a>`:''}
     ${renew}${acts}
     <div class="dgr"><span></span><span></span><span></span></div>
   </div>`;
@@ -954,6 +961,7 @@ function openModal(id=null,defaultCol='hoje',prefill=null){
   document.getElementById('f-person').value=t?t.person:(prefill?.person||'');
   document.getElementById('f-rec').value   =t?t.rec   :'';
   document.getElementById('f-tag').value   =t?t.tag   :'';
+  document.getElementById('f-link').value  =t?t.link  :'';
   document.getElementById('f-col').value   =t?t.col   :defaultCol;
   document.getElementById('btn-del').style.display =(t)?'':'none';
   document.getElementById('btn-next').style.display=(t||activeInboxId)?'':'none';
@@ -989,6 +997,7 @@ function getFormData(){
     person:document.getElementById('f-person').value.trim(),
     rec:   document.getElementById('f-rec').value,
     tag:   document.getElementById('f-tag').value.trim(),
+    link:  document.getElementById('f-link').value.trim(),
     origin:activeInboxId?'external':'',
     completedAt:'',
   };
