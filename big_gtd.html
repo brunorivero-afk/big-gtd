@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BIG GTD</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 :root {
   --canvas:#0C1020;--surf:#141927;--raised:#1C2438;--brd:#252E4A;--brd-hi:#3A4570;
@@ -272,9 +273,41 @@ body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--
 .toast.hidden{opacity:0;pointer-events:none;transform:translateX(-50%) translateY(8px);}
 .g-hidden{display:none!important;}
 button:focus-visible{outline:2px solid var(--acc);outline-offset:2px;}
+
+/* LOGIN */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--canvas);}
+.login-box{background:var(--surf);border:1px solid var(--brd);border-radius:10px;padding:40px 36px;width:340px;display:flex;flex-direction:column;gap:18px;}
+.login-logo{font-size:20px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;text-align:center;}
+.login-logo em{color:var(--acc);font-style:normal;}
+.login-sub{font-size:12px;color:var(--t2);text-align:center;margin-top:-12px;}
+.login-err{color:#ef4444;font-size:12px;min-height:18px;}
+.login-btn{background:var(--acc);color:#fff;border:none;border-radius:var(--r);padding:11px;font-size:14px;font-weight:700;cursor:pointer;width:100%;transition:opacity .15s;}
+.login-btn:hover{opacity:.88;}
+.logout-btn{background:transparent;border:1px solid var(--brd);border-radius:var(--r);color:var(--t2);font-size:12px;padding:4px 10px;cursor:pointer;flex-shrink:0;margin-left:auto;}
+.logout-btn:hover{color:var(--t1);border-color:var(--brd-hi);}
 </style>
 </head>
 <body>
+
+<!-- ══ LOGIN ══ -->
+<div id="login-screen" class="g-hidden">
+  <div class="login-box">
+    <div class="login-logo">Big <em>GTD</em></div>
+    <div class="login-sub">Gerenciador de tarefas</div>
+    <div class="field">
+      <label>E-mail</label>
+      <input type="email" id="l-email" placeholder="seu@email.com" autocomplete="email"
+        onkeydown="if(event.key==='Enter')document.getElementById('l-pw').focus()">
+    </div>
+    <div class="field">
+      <label>Senha</label>
+      <input type="password" id="l-pw" placeholder="••••••••" autocomplete="current-password"
+        onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div id="l-err" class="login-err"></div>
+    <button class="login-btn" onclick="doLogin()">Entrar</button>
+  </div>
+</div>
 
 <!-- ══ EXTERNAL FORM MODE (shown when ?form in URL) ══ -->
 <div id="form-mode" class="g-hidden">
@@ -307,10 +340,8 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:2px;}
         <div id="fm-success" class="g-hidden">
           <div class="fm-success-inner">
             <div class="fm-ok-icon">✅</div>
-            <div class="fm-ok-title">Pronto!</div>
-            <div class="fm-ok-sub">Toque em "Abrir WhatsApp" para enviar a mensagem com o link da tarefa.</div>
-            <a id="fm-wa-link" href="#" target="_blank" class="fm-wa">💬 Abrir WhatsApp</a>
-            <button class="fm-copy-btn" onclick="copyExtLink()">📋 Copiar link</button>
+            <div class="fm-ok-title">Enviado!</div>
+            <div class="fm-ok-sub">Sua solicitação chegou. Bruno vai organizar em breve.</div>
             <button class="fm-reset" onclick="resetExtForm()">Enviar outra tarefa</button>
           </div>
         </div>
@@ -332,6 +363,7 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:2px;}
     <button class="nav-btn" id="nb-formview"  onclick="gotoView('form-view')">🔗 Formulário</button>
     <button class="nav-btn" id="nb-inbox"     onclick="gotoView('inbox')">📥 Entrada <span class="ibadge" id="ibadge"></span></button>
   </div>
+  <button class="logout-btn" onclick="doLogout()" title="Sair">Sair</button>
 </header>
 
 <div class="legend">
@@ -464,10 +496,13 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:2px;}
 <script>
 // ── CONFIG ────────────────────────────────────────────────────────────
 const CFG = {
-  owner:    'Bruno',
-  whatsapp: '+5521981678093',
-  baseUrl:  'https://brunorivero-afk.github.io/big-gtd/big_gtd.html',
+  owner:       'Bruno',
+  supabaseUrl: 'https://pxcqyzbgfbwwkazmonzx.supabase.co',
+  supabaseKey: 'sb_publishable_6QT2f_wCkTmpfoO_EEZlpA_BCcC8Fv8',
 };
+
+const _sb = supabase.createClient(CFG.supabaseUrl, CFG.supabaseKey);
+let _sbUser = null;
 
 // ── CONSTANTS ─────────────────────────────────────────────────────────
 const COLS     = [{key:'hoje',label:'Hoje'},{key:'semana',label:'Esta Semana'},{key:'aguardando',label:'Aguardando'},{key:'concluido',label:'Concluído'}];
@@ -480,18 +515,32 @@ let activeFilter='all', currentView='kanban';
 let editId=null, activeInboxId=null;
 let formCat='c', formPri='h';
 let dragId=null, expandedCols=new Set();
-let extLinkForCopy='';
 
 // ── PERSISTENCE ───────────────────────────────────────────────────────
-const saveData  = ()=> localStorage.setItem('bigtd_v2',      JSON.stringify(tasks));
-const saveInbox = ()=> localStorage.setItem('bigtd_inbox_v2', JSON.stringify(inboxItems));
+function saveData() {
+  localStorage.setItem('bigtd_v2', JSON.stringify(tasks));
+  if (!_sbUser) return;
+  _sb.from('gtd_data')
+    .upsert({ user_id: _sbUser.id, tasks, updated_at: new Date().toISOString() })
+    .then(({ error }) => { if (error) console.warn('saveData error:', error); });
+}
 
-function loadData() {
-  const rt = localStorage.getItem('bigtd_v2');
-  tasks = rt ? JSON.parse(rt) : [];
-  if (!rt) saveData();
-  const ri = localStorage.getItem('bigtd_inbox_v2');
-  inboxItems = ri ? JSON.parse(ri) : [];
+async function loadData() {
+  const { data } = await _sb.from('gtd_data')
+    .select('tasks').eq('user_id', _sbUser.id).maybeSingle();
+  tasks = data?.tasks ?? [];
+  localStorage.setItem('bigtd_v2', JSON.stringify(tasks));
+  await loadInbox();
+}
+
+async function loadInbox() {
+  const { data } = await _sb.from('gtd_inbox')
+    .select('*').order('submitted_at', { ascending: false });
+  inboxItems = (data ?? []).map(r => ({
+    id: r.id, title: r.title, from: r.person,
+    due: r.due, note: r.note, status: r.status,
+    receivedAt: r.submitted_at,
+  }));
 }
 
 const uid = ()=> Math.random().toString(36).slice(2,9)+Date.now().toString(36);
@@ -530,22 +579,32 @@ function timeAgo(iso) {
   const h=Math.floor(m/60); if(h<24) return `há ${h}h`;
   return `há ${Math.floor(h/24)}d`;
 }
-function encodePayload(obj) {
-  try { return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))); }
-  catch(e) { return encodeURIComponent(JSON.stringify(obj)); }
+function showLogin() {
+  document.getElementById('login-screen').classList.remove('g-hidden');
 }
 
-// ── URL PARAMS ────────────────────────────────────────────────────────
-function processUrlParams() {
-  const raw = new URLSearchParams(location.search).get('inbox_add');
-  if (!raw) return;
-  try {
-    const d = JSON.parse(decodeURIComponent(escape(atob(raw))));
-    inboxItems.unshift({id:uid(),title:d.title||'(sem título)',from:d.from||'Desconhecido',due:d.due||'',note:d.note||'',receivedAt:new Date().toISOString(),status:'pending'});
-    saveInbox(); gotoView('inbox'); toast(`📥 Nova tarefa de ${inboxItems[0].from}`);
-  } catch(e) {}
-  history.replaceState({},'',' ');
+async function doLogin() {
+  const email = document.getElementById('l-email').value.trim();
+  const pw    = document.getElementById('l-pw').value;
+  const err   = document.getElementById('l-err');
+  err.textContent = '';
+  const btn = document.querySelector('.login-btn');
+  btn.disabled = true; btn.textContent = 'Entrando...';
+  const { data, error } = await _sb.auth.signInWithPassword({ email, password: pw });
+  btn.disabled = false; btn.textContent = 'Entrar';
+  if (error) { err.textContent = 'E-mail ou senha incorretos.'; return; }
+  _sbUser = data.user;
+  document.getElementById('login-screen').classList.add('g-hidden');
+  await loadData();
+  document.getElementById('app').classList.remove('g-hidden');
+  render(); gotoView('kanban');
 }
+
+async function doLogout() {
+  await _sb.auth.signOut();
+  location.reload();
+}
+
 
 // ── VIEW MANAGEMENT ───────────────────────────────────────────────────
 const VIEWS = ['kanban','foco','inbox','dashboard','form-view'];
@@ -718,9 +777,11 @@ function acceptInbox(id) {
   activeInboxId=id;
   openModal(null,'hoje',{title:item.title,person:item.from,due:item.due,cat:'p',pri:'m',source:`De ${item.from}`});
 }
-function rejectInbox(id) {
-  const item=inboxItems.find(i=>i.id===id);
-  if(item){item.status='rejected';saveInbox();renderInbox();updateInboxBadge();toast('Descartada');}
+async function rejectInbox(id) {
+  const item=inboxItems.find(i=>i.id===id); if(!item) return;
+  item.status='rejected';
+  await _sb.from('gtd_inbox').update({status:'rejected'}).eq('id',id);
+  renderInbox(); updateInboxBadge(); toast('Descartada');
 }
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────
@@ -828,15 +889,11 @@ function renderFormView() {
     <div class="v-sub">Link que você compartilha — quem clicar vê o formulário e te envia a tarefa</div>
   </div>
 
-  ${!CFG.baseUrl?`<div class="fv-warn">⚠ Link local — só funciona neste computador. Após deploy no GitHub Pages, configure <b>CFG.baseUrl</b> no arquivo.</div>`:''}
-  ${!CFG.whatsapp?`<div class="fv-warn">⚠ Configure <b>CFG.whatsapp</b> para que o formulário possa abrir o WhatsApp automaticamente.</div>`:''}
-
   <div class="fv-box">
     <div class="fv-box-title">Link do formulário</div>
     <div class="fv-url">${esc(link)}</div>
     <div class="fv-btns">
       <button class="fv-copy" onclick="copyToClipboard('${esc(link)}','✓ Link copiado!')">📋 Copiar link</button>
-      ${CFG.whatsapp?`<button class="fv-wa" onclick="shareFormViaWA()">💬 Enviar pelo WhatsApp</button>`:''}
     </div>
   </div>
 
@@ -855,16 +912,8 @@ function renderFormView() {
   </div>`;
 }
 
-function shareFormViaWA() {
-  const base = CFG.baseUrl || window.location.href.split('?')[0];
-  const link = base + '?form';
-  const msg  = `Olá! Este é o link para você me enviar tarefas:\n${link}`;
-  const num  = CFG.whatsapp.replace(/\D/g,'');
-  window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`,'_blank');
-}
-
 // ── EXTERNAL FORM ─────────────────────────────────────────────────────
-function submitExtForm(e) {
+async function submitExtForm(e) {
   e.preventDefault();
   const title=document.getElementById('fm-title').value.trim();
   const from =document.getElementById('fm-from').value.trim();
@@ -872,34 +921,29 @@ function submitExtForm(e) {
   const note =document.getElementById('fm-note').value.trim();
   if (!title||!from) return;
 
-  const payload = encodePayload({title,from,due,note});
-  const base    = CFG.baseUrl || window.location.href.split('?')[0];
-  const link    = base + '?inbox_add=' + payload;
-  extLinkForCopy= link;
+  const btn=e.target.querySelector('button[type=submit]');
+  btn.disabled=true; btn.textContent='Enviando...';
 
-  const msg = `🗒️ *Nova tarefa para ${CFG.owner}!*\n📌 ${title}\n👤 ${from}${due?'\n📅 '+due:''}${note?'\n📝 '+note:''}\n\n👉 Aceitar: ${link}`;
-  const num = (CFG.whatsapp||'').replace(/\D/g,'');
+  const { error } = await _sb.from('gtd_inbox').insert({
+    title, person: from, due, note, status: 'pending'
+  });
 
-  const waBtn = document.getElementById('fm-wa-link');
-  if (num) {
-    const waUrl = `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
-    waBtn.href  = waUrl;
-    if (/Mobi|Android|iPhone/i.test(navigator.userAgent)) window.location.href=waUrl;
-  } else {
-    waBtn.style.display='none';
+  if (error) {
+    btn.disabled=false; btn.textContent='Enviar tarefa →';
+    alert('Erro ao enviar. Tente novamente.');
+    return;
   }
 
   document.getElementById('ext-form').classList.add('g-hidden');
   document.getElementById('fm-success').classList.remove('g-hidden');
 }
 
-function copyExtLink() { copyToClipboard(extLinkForCopy,'✓ Link copiado!'); }
-
 function resetExtForm() {
   document.getElementById('ext-form').reset();
   document.getElementById('ext-form').classList.remove('g-hidden');
   document.getElementById('fm-success').classList.add('g-hidden');
-  const waBtn=document.getElementById('fm-wa-link'); if(waBtn) waBtn.style.display='';
+  const btn=document.querySelector('#ext-form button[type=submit]');
+  if(btn){btn.disabled=false;btn.textContent='Enviar tarefa →';}
 }
 
 // ── QUICK ACTIONS ─────────────────────────────────────────────────────
@@ -1012,20 +1056,21 @@ function _commit(data){
   } else {
     tasks.push({id:uid(),...data});
   }
-  if(activeInboxId){
-    const item=inboxItems.find(i=>i.id===activeInboxId);
-    if(item)item.status='accepted';
-    saveInbox(); renderInbox(); updateInboxBadge();
-  }
   saveData(); render();
 }
 
-function saveTask(){
+async function saveTask(){
   const data=getFormData();
   if(!data.title){hlField('f-title');return;}
   _commit(data);
   toast(editId?'Tarefa atualizada':'Tarefa criada');
-  if(activeInboxId)gotoView('kanban');
+  if(activeInboxId){
+    const item=inboxItems.find(i=>i.id===activeInboxId);
+    if(item) item.status='accepted';
+    _sb.from('gtd_inbox').update({status:'accepted'}).eq('id',activeInboxId).then(()=>{});
+    renderInbox(); updateInboxBadge();
+    gotoView('kanban');
+  }
   closeModal();
 }
 
@@ -1074,17 +1119,19 @@ document.addEventListener('keydown',e=>{
 document.getElementById('overlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
 
 // ── INIT ──────────────────────────────────────────────────────────────
-loadData();
-
-if(new URLSearchParams(location.search).has('form')){
-  document.getElementById('form-mode').classList.remove('g-hidden');
-  document.getElementById('fm-owner-name').textContent=CFG.owner;
-} else {
+(async function(){
+  if(new URLSearchParams(location.search).has('form')){
+    document.getElementById('form-mode').classList.remove('g-hidden');
+    document.getElementById('fm-owner-name').textContent=CFG.owner;
+    return;
+  }
+  const { data:{ session } } = await _sb.auth.getSession();
+  _sbUser = session?.user ?? null;
+  if(!_sbUser){ showLogin(); return; }
+  await loadData();
   document.getElementById('app').classList.remove('g-hidden');
-  processUrlParams();
-  render();
-  gotoView('kanban');
-}
+  render(); gotoView('kanban');
+})();
 </script>
 </body>
 </html>
