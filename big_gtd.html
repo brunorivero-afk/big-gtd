@@ -335,6 +335,10 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:2px;}
             <label>Mais detalhes (opcional)</label>
             <textarea id="fm-note" placeholder="Contexto, urgência..." rows="2"></textarea>
           </div>
+          <div class="fm-field">
+            <label>Link (opcional)</label>
+            <input type="url" id="fm-link" placeholder="ex: https://...">
+          </div>
           <button type="submit" class="fm-submit">Enviar tarefa →</button>
         </form>
         <div id="fm-success" class="g-hidden">
@@ -445,17 +449,12 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:2px;}
       </div>
       <div class="row2">
         <div class="field">
-          <label>Coluna</label>
-          <select id="f-col">
-            <option value="hoje">Hoje</option>
-            <option value="semana">Esta Semana</option>
-            <option value="aguardando">Aguardando</option>
-            <option value="concluido">Concluído</option>
-          </select>
+          <label>Quando fazer</label>
+          <input type="date" id="f-quando">
         </div>
         <div class="field">
-          <label>Vencimento</label>
-          <input type="text" id="f-due" placeholder="ex: Sex, 18/07">
+          <label>Prazo / Vencimento</label>
+          <input type="date" id="f-due">
         </div>
       </div>
       <div class="row2">
@@ -538,7 +537,7 @@ async function loadInbox() {
     .select('*').order('submitted_at', { ascending: false });
   inboxItems = (data ?? []).map(r => ({
     id: r.id, title: r.title, from: r.person,
-    due: r.due, note: r.note, status: r.status,
+    due: r.due, note: r.note, link: r.link||'', status: r.status,
     receivedAt: r.submitted_at,
   }));
 }
@@ -578,6 +577,23 @@ function timeAgo(iso) {
   if(m<1) return 'agora'; if(m<60) return `há ${m}min`;
   const h=Math.floor(m/60); if(h<24) return `há ${h}h`;
   return `há ${Math.floor(h/24)}d`;
+}
+function fmtDate(ds) {
+  if(!ds) return '';
+  const [,m,d]=ds.split('-'); return `${d}/${m}`;
+}
+function dateToCol(ds) {
+  if(!ds) return 'hoje';
+  const diff=Math.round((new Date(ds+'T12:00:00')-new Date().setHours(0,0,0,0))/86400000);
+  if(diff<=0) return 'hoje';
+  if(diff<=7) return 'semana';
+  return 'aguardando';
+}
+function colToDate(col) {
+  const d=new Date();
+  if(col==='semana')    d.setDate(d.getDate()+3);
+  if(col==='aguardando') d.setDate(d.getDate()+14);
+  return d.toISOString().split('T')[0];
 }
 function showLogin() {
   document.getElementById('login-screen').classList.remove('g-hidden');
@@ -660,7 +676,7 @@ function dotCls(t) {
 
 function cardHTML(t) {
   const done   = t.col==='concluido';
-  const hasFoot= t.person||(t.due&&t.due!=='Hoje');
+  const hasFoot= t.person||t.due;
   const renew  = done&&t.rec ? `<button class="btn-renew" onclick="renewTask(event,'${esc(t.id)}')">↻ Renovar para Hoje</button>` : '';
   const acts = `
     <div class="card-acts">
@@ -682,7 +698,7 @@ function cardHTML(t) {
       ${t.origin==='external'?`<span class="chip ch-ext">📥 externo</span>`:''}
       ${t.tag?`<span class="chip ch-t">${esc(t.tag)}</span>`:''}
     </div>
-    ${hasFoot?`<div class="cfot"><div class="cpersn">${av(t.person)}<span>${esc(t.person||'')}</span></div><div class="cdue">${esc(t.due||'')}</div></div>`:''}
+    ${hasFoot?`<div class="cfot"><div class="cpersn">${av(t.person)}<span>${esc(t.person||'')}</span></div><div class="cdue">${fmtDate(t.due)}</div></div>`:''}
     ${t.link?`<a class="card-link" href="${esc(t.link)}" target="_blank" onclick="event.stopPropagation()">🔗 Ver link</a>`:''}
     ${renew}${acts}
     <div class="dgr"><span></span><span></span><span></span></div>
@@ -919,13 +935,14 @@ async function submitExtForm(e) {
   const from =document.getElementById('fm-from').value.trim();
   const due  =document.getElementById('fm-due').value.trim();
   const note =document.getElementById('fm-note').value.trim();
+  const link =document.getElementById('fm-link').value.trim();
   if (!title||!from) return;
 
   const btn=e.target.querySelector('button[type=submit]');
   btn.disabled=true; btn.textContent='Enviando...';
 
   const { error } = await _sb.from('gtd_inbox').insert({
-    title, person: from, due, note, status: 'pending'
+    title, person: from, due, note, link, status: 'pending'
   });
 
   if (error) {
@@ -1001,12 +1018,12 @@ function openModal(id=null,defaultCol='hoje',prefill=null){
   document.getElementById('modal-title').textContent =t?'Editar tarefa':'Nova tarefa';
   document.getElementById('modal-source').textContent=prefill?.source||'';
   document.getElementById('f-title').value =t?t.title :(prefill?.title ||'');
-  document.getElementById('f-due').value   =t?t.due   :(prefill?.due   ||'');
+  document.getElementById('f-quando').value=t?(t.quando||colToDate(t.col)):colToDate(defaultCol);
+  document.getElementById('f-due').value   =t?(t.due||''):(prefill?.due||'');
   document.getElementById('f-person').value=t?t.person:(prefill?.person||'');
   document.getElementById('f-rec').value   =t?t.rec   :'';
   document.getElementById('f-tag').value   =t?t.tag   :'';
   document.getElementById('f-link').value  =t?t.link  :'';
-  document.getElementById('f-col').value   =t?t.col   :defaultCol;
   document.getElementById('btn-del').style.display =(t)?'':'none';
   document.getElementById('btn-next').style.display=(t||activeInboxId)?'':'none';
   document.getElementById('btn-save').textContent  =t?'Salvar':'Criar';
@@ -1033,16 +1050,18 @@ function setSeg(type,val){
 }
 
 function getFormData(){
+  const quando=document.getElementById('f-quando').value;
   return {
-    title: document.getElementById('f-title').value.trim(),
+    title:  document.getElementById('f-title').value.trim(),
     cat:formCat, pri:formPri,
-    col:   document.getElementById('f-col').value,
-    due:   document.getElementById('f-due').value.trim(),
-    person:document.getElementById('f-person').value.trim(),
-    rec:   document.getElementById('f-rec').value,
-    tag:   document.getElementById('f-tag').value.trim(),
-    link:  document.getElementById('f-link').value.trim(),
-    origin:activeInboxId?'external':'',
+    col:    dateToCol(quando),
+    quando,
+    due:    document.getElementById('f-due').value,
+    person: document.getElementById('f-person').value.trim(),
+    rec:    document.getElementById('f-rec').value,
+    tag:    document.getElementById('f-tag').value.trim(),
+    link:   document.getElementById('f-link').value.trim(),
+    origin: activeInboxId?'external':'',
     completedAt:'',
   };
 }
