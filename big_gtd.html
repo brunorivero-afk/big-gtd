@@ -245,7 +245,8 @@ body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--
 .modal-body{padding:15px;display:flex;flex-direction:column;gap:12px;}
 .field{display:flex;flex-direction:column;gap:4px;}
 .field label{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--t2);}
-.field input[type="text"],.field select{background:var(--raised);border:1px solid var(--brd);border-radius:var(--r);color:var(--t1);font-family:inherit;font-size:13px;padding:7px 9px;outline:none;width:100%;transition:border-color .12s;-webkit-appearance:none;}
+.field input[type="text"],.field input[type="datetime-local"],.field select{background:var(--raised);border:1px solid var(--brd);border-radius:var(--r);color:var(--t1);font-family:inherit;font-size:13px;padding:7px 9px;outline:none;width:100%;transition:border-color .12s;-webkit-appearance:none;}
+.field input[type="datetime-local"]{color-scheme:dark light;}
 .field input:focus,.field select:focus{border-color:var(--acc);}
 .field select option{background:var(--surf);color:var(--t1);}
 .field input::placeholder{color:var(--t3);}
@@ -273,6 +274,25 @@ body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--
 .toast.hidden{opacity:0;pointer-events:none;transform:translateX(-50%) translateY(8px);}
 .g-hidden{display:none!important;}
 button:focus-visible{outline:2px solid var(--acc);outline-offset:2px;}
+
+/* LEMBRETES */
+.ch-lem{color:var(--per);background:rgba(34,211,180,.13);}
+.lbadge{color:var(--per);font-weight:800;font-size:inherit;}
+.lem-wrap{padding:18px 16px 32px;max-width:760px;}
+.lem-section-label{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);padding:10px 0 5px;border-bottom:1px solid var(--brd);margin-bottom:6px;}
+.lem-row{display:flex;align-items:center;gap:10px;padding:10px 13px;background:var(--surf);border:1px solid var(--brd);border-radius:var(--r);margin-bottom:7px;cursor:pointer;transition:border-color .12s;}
+.lem-row:hover{border-color:var(--brd-hi);}
+.lem-time{font-size:11px;font-weight:700;white-space:nowrap;min-width:80px;}
+.lem-time.past{color:var(--ph);}
+.lem-time.soon{color:var(--pm);}
+.lem-time.future{color:var(--pl);}
+.lem-title{flex:1;font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.lem-tag{font-size:10px;color:var(--t3);flex-shrink:0;}
+.lem-clr{background:none;border:1px solid var(--brd);color:var(--t3);font-size:10px;font-weight:600;padding:3px 8px;border-radius:var(--r);cursor:pointer;flex-shrink:0;white-space:nowrap;transition:border-color .12s,color .12s;}
+.lem-clr:hover{border-color:var(--ph);color:var(--ph);}
+.lem-empty{text-align:center;color:var(--t3);font-size:13px;padding:40px;background:var(--surf);border:1px dashed var(--brd);border-radius:7px;}
+.btn-clr-lem{background:none;border:1px solid var(--brd);color:var(--t3);font-size:11px;font-weight:600;padding:5px 10px;border-radius:var(--r);cursor:pointer;align-self:flex-end;transition:border-color .12s,color .12s;margin-bottom:1px;}
+.btn-clr-lem:hover{border-color:var(--ph);color:var(--ph);}
 
 /* LOGIN */
 #login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--canvas);}
@@ -365,7 +385,8 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:2px;}
     <button class="nav-btn" id="nb-foco"      onclick="gotoView('foco')">☀ Foco</button>
     <button class="nav-btn" id="nb-dashboard" onclick="gotoView('dashboard')">📊 Dados</button>
     <button class="nav-btn" id="nb-formview"  onclick="gotoView('form-view')">🔗 Formulário</button>
-    <button class="nav-btn" id="nb-inbox"     onclick="gotoView('inbox')">📥 Entrada <span class="ibadge" id="ibadge"></span></button>
+    <button class="nav-btn" id="nb-inbox"      onclick="gotoView('inbox')">📥 Entrada <span class="ibadge" id="ibadge"></span></button>
+    <button class="nav-btn" id="nb-lembretes" onclick="gotoView('lembretes')">🔔 Lembretes <span class="lbadge" id="lbadge"></span></button>
   </div>
   <button class="logout-btn" onclick="doLogout()" title="Sair">Sair</button>
 </header>
@@ -411,6 +432,10 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:2px;}
 
 <div id="view-form-view" class="g-hidden">
   <div class="fv-wrap" id="formview-body"></div>
+</div>
+
+<div id="view-lembretes" class="g-hidden">
+  <div class="lem-wrap" id="lembretes-body"></div>
 </div>
 
 </div><!-- /#app -->
@@ -479,6 +504,15 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:2px;}
       <div class="field">
         <label>Link (opcional)</label>
         <input type="text" id="f-link" placeholder="ex: https://mercadolivre.com.br/produto...">
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>🔔 Lembrete</label>
+          <input type="datetime-local" id="f-lembrete">
+        </div>
+        <div class="field" style="display:flex;align-items:flex-end">
+          <button class="btn-clr-lem g-hidden" id="btn-clr-lem" onclick="clearLembrete()">Remover lembrete</button>
+        </div>
       </div>
     </div>
     <div class="modal-ftr">
@@ -623,8 +657,8 @@ async function doLogout() {
 
 
 // ── VIEW MANAGEMENT ───────────────────────────────────────────────────
-const VIEWS = ['kanban','foco','inbox','dashboard','form-view'];
-const NAV   = {kanban:'nb-kanban',foco:'nb-foco',inbox:'nb-inbox',dashboard:'nb-dashboard','form-view':'nb-formview'};
+const VIEWS = ['kanban','foco','inbox','dashboard','form-view','lembretes'];
+const NAV   = {kanban:'nb-kanban',foco:'nb-foco',inbox:'nb-inbox',dashboard:'nb-dashboard','form-view':'nb-formview',lembretes:'nb-lembretes'};
 
 function gotoView(v) {
   currentView = v;
@@ -641,6 +675,7 @@ function gotoView(v) {
   if (v==='inbox')     renderInbox();
   if (v==='dashboard') renderDashboard();
   if (v==='form-view') renderFormView();
+  if (v==='lembretes') renderLembretes();
 }
 
 // ── FILTER ────────────────────────────────────────────────────────────
@@ -666,7 +701,12 @@ function updateInboxBadge() {
   const n = inboxItems.filter(i=>i.status==='pending').length;
   document.getElementById('ibadge').textContent = n > 0 ? ` (${n})` : '';
 }
-function render() { renderKanban(); renderStats(); updateInboxBadge(); }
+function updateLembreteBadge() {
+  const now = new Date();
+  const n = tasks.filter(t => t.lembrete && !t.lembreteOk && t.col !== 'concluido' && new Date(t.lembrete) > now).length;
+  document.getElementById('lbadge').textContent = n > 0 ? ` (${n})` : '';
+}
+function render() { renderKanban(); renderStats(); updateInboxBadge(); updateLembreteBadge(); }
 
 // ── KANBAN ────────────────────────────────────────────────────────────
 function dotCls(t) {
@@ -697,6 +737,7 @@ function cardHTML(t) {
       ${t.rec?`<span class="chip ch-r">↻ ${esc(t.rec)}</span>`:''}
       ${t.origin==='external'?`<span class="chip ch-ext">📥 externo</span>`:''}
       ${t.tag?`<span class="chip ch-t">${esc(t.tag)}</span>`:''}
+      ${t.lembrete&&!t.lembreteOk?`<span class="chip ch-lem">🔔 ${fmtLembreteChip(t.lembrete)}</span>`:''}
     </div>
     ${hasFoot?`<div class="cfot"><div class="cpersn">${av(t.person)}<span>${esc(t.person||'')}</span></div><div class="cdue">${fmtDate(t.due)}</div></div>`:''}
     ${t.link?`<a class="card-link" href="${esc(t.link)}" target="_blank" onclick="event.stopPropagation()">🔗 Ver link</a>`:''}
@@ -1023,7 +1064,10 @@ function openModal(id=null,defaultCol='hoje',prefill=null){
   document.getElementById('f-person').value=t?t.person:(prefill?.person||'');
   document.getElementById('f-rec').value   =t?t.rec   :'';
   document.getElementById('f-tag').value   =t?t.tag   :'';
-  document.getElementById('f-link').value  =t?t.link  :'';
+  document.getElementById('f-link').value    =t?t.link  :'';
+  const lemVal = t&&t.lembrete ? t.lembrete.slice(0,16) : '';
+  document.getElementById('f-lembrete').value = lemVal;
+  document.getElementById('btn-clr-lem').classList.toggle('g-hidden', !lemVal);
   document.getElementById('btn-del').style.display =(t)?'':'none';
   document.getElementById('btn-next').style.display=(t||activeInboxId)?'':'none';
   document.getElementById('btn-save').textContent  =t?'Salvar':'Criar';
@@ -1061,6 +1105,7 @@ function getFormData(){
     rec:    document.getElementById('f-rec').value,
     tag:    document.getElementById('f-tag').value.trim(),
     link:   document.getElementById('f-link').value.trim(),
+    lembrete: document.getElementById('f-lembrete').value || '',
     origin: activeInboxId?'external':'',
     completedAt:'',
   };
@@ -1071,9 +1116,11 @@ function _commit(data){
     const t=tasks.find(t=>t.id===editId);
     const keep={origin:t.origin||'',completedAt:t.completedAt||''};
     if(data.col==='concluido'&&t.col!=='concluido') keep.completedAt=new Date().toISOString();
+    const lembreteChanged = data.lembrete !== (t.lembrete||'');
+    keep.lembreteOk = lembreteChanged ? false : (t.lembreteOk||false);
     Object.assign(t,data,keep);
   } else {
-    tasks.push({id:uid(),...data});
+    tasks.push({id:uid(),...data,lembreteOk:false});
   }
   saveData(); render();
 }
@@ -1137,6 +1184,123 @@ document.addEventListener('keydown',e=>{
 });
 document.getElementById('overlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
 
+// ── LEMBRETES ─────────────────────────────────────────────────────────
+function fmtLembreteChip(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const now = new Date();
+  const diffMin = Math.round((d - now) / 60000);
+  if (diffMin < 0) return 'vencido';
+  if (diffMin < 60) return `${diffMin}min`;
+  if (diffMin < 1440) return `${Math.round(diffMin/60)}h`;
+  const dd = String(d.getDate()).padStart(2,'0');
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const hh = String(d.getHours()).padStart(2,'0');
+  const mi = String(d.getMinutes()).padStart(2,'0');
+  return `${dd}/${mm} ${hh}:${mi}`;
+}
+
+function fmtLembreteRow(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const now = new Date();
+  const diffMin = Math.round((d - now) / 60000);
+  const dd = String(d.getDate()).padStart(2,'0');
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const hh = String(d.getHours()).padStart(2,'0');
+  const mi = String(d.getMinutes()).padStart(2,'0');
+  const label = `${dd}/${mm} ${hh}:${mi}`;
+  if (diffMin < 0) return {label, cls:'past'};
+  if (diffMin < 120) return {label, cls:'soon'};
+  return {label, cls:'future'};
+}
+
+function clearLembrete() {
+  document.getElementById('f-lembrete').value = '';
+  document.getElementById('btn-clr-lem').classList.add('g-hidden');
+}
+
+document.getElementById('f-lembrete').addEventListener('change', function() {
+  document.getElementById('btn-clr-lem').classList.toggle('g-hidden', !this.value);
+});
+
+function requestNotifPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
+
+function checkReminders() {
+  const now = new Date();
+  let changed = false;
+  tasks.filter(t => t.lembrete && !t.lembreteOk && t.col !== 'concluido').forEach(t => {
+    if (new Date(t.lembrete) <= now) {
+      fireReminder(t);
+      t.lembreteOk = true;
+      changed = true;
+    }
+  });
+  if (changed) { saveData(); render(); if (currentView === 'lembretes') renderLembretes(); }
+}
+
+function fireReminder(t) {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    const n = new Notification('🔔 BIG GTD — Lembrete', {
+      body: t.title + (t.tag ? ` [${t.tag}]` : ''),
+      tag: 'gtd-' + t.id,
+    });
+    n.onclick = () => { window.focus(); openModal(t.id); n.close(); };
+  }
+  toast('🔔 ' + t.title);
+}
+
+function renderLembretes() {
+  const el = document.getElementById('lembretes-body');
+  const now = new Date();
+  const pending = tasks
+    .filter(t => t.lembrete && !t.lembreteOk && t.col !== 'concluido')
+    .sort((a,b) => new Date(a.lembrete) - new Date(b.lembrete));
+  const fired = tasks
+    .filter(t => t.lembrete && t.lembreteOk && t.col !== 'concluido')
+    .sort((a,b) => new Date(b.lembrete) - new Date(a.lembrete))
+    .slice(0, 10);
+
+  const notifStatus = !('Notification' in window)
+    ? `<div style="font-size:11px;color:var(--pm);background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:var(--r);padding:8px 12px;margin-bottom:14px">⚠️ Notificações não suportadas neste navegador. Os lembretes aparecem como toast ao abrir o app.</div>`
+    : Notification.permission === 'denied'
+    ? `<div style="font-size:11px;color:var(--ph);background:rgba(242,72,60,.08);border:1px solid rgba(242,72,60,.2);border-radius:var(--r);padding:8px 12px;margin-bottom:14px">🚫 Notificações bloqueadas. Habilite nas configurações do navegador para receber alertas.</div>`
+    : Notification.permission === 'default'
+    ? `<div style="font-size:11px;color:var(--per);background:rgba(34,211,180,.08);border:1px solid rgba(34,211,180,.2);border-radius:var(--r);padding:8px 12px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between"><span>🔔 Autorize notificações para receber alertas.</span><button onclick="Notification.requestPermission().then(()=>renderLembretes())" style="background:var(--acc);border:none;color:#fff;font-size:11px;font-weight:600;padding:4px 10px;border-radius:var(--r);cursor:pointer">Autorizar</button></div>`
+    : '';
+
+  const rowHTML = (t, showPast) => {
+    const {label, cls} = fmtLembreteRow(t.lembrete);
+    return `<div class="lem-row" onclick="openModal('${esc(t.id)}')">
+      <div class="lem-time ${cls}">${label}</div>
+      <div class="lem-title">${esc(t.title)}</div>
+      ${t.tag ? `<div class="lem-tag">${esc(t.tag)}</div>` : ''}
+      <button class="lem-clr" onclick="event.stopPropagation();removeLembrete('${esc(t.id)}')">Remover</button>
+    </div>`;
+  };
+
+  el.innerHTML = `
+    <div class="v-hdr"><div class="v-title">🔔 Lembretes</div><div class="v-sub">Tarefas com alertas programados</div></div>
+    ${notifStatus}
+    ${pending.length
+      ? `<div class="lem-section-label">Próximos (${pending.length})</div>${pending.map(t=>rowHTML(t)).join('')}`
+      : `<div class="lem-empty">Nenhum lembrete ativo.<br><span style="font-size:11px">Abra uma tarefa e defina um horário no campo 🔔 Lembrete.</span></div>`}
+    ${fired.length
+      ? `<div class="lem-section-label" style="margin-top:18px">Já disparados</div>${fired.map(t=>rowHTML(t)).join('')}`
+      : ''}`;
+}
+
+function removeLembrete(id) {
+  const t = tasks.find(t => t.id === id); if (!t) return;
+  t.lembrete = ''; t.lembreteOk = false;
+  saveData(); render(); renderLembretes();
+  toast('Lembrete removido');
+}
+
 // ── INIT ──────────────────────────────────────────────────────────────
 (async function(){
   if(new URLSearchParams(location.search).has('form')){
@@ -1150,6 +1314,9 @@ document.getElementById('overlay').addEventListener('click',function(e){if(e.tar
   await loadData();
   document.getElementById('app').classList.remove('g-hidden');
   render(); gotoView('kanban');
+  requestNotifPermission();
+  checkReminders();
+  setInterval(checkReminders, 30000);
 })();
 </script>
 </body>
