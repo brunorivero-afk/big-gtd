@@ -388,7 +388,6 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:2px;}
     <button class="nav-btn" id="nb-inbox"      onclick="gotoView('inbox')">📥 Entrada <span class="ibadge" id="ibadge"></span></button>
     <button class="nav-btn" id="nb-lembretes" onclick="gotoView('lembretes')">🔔 Lembretes <span class="lbadge" id="lbadge"></span></button>
   </div>
-  <button class="logout-btn" onclick="doLogout()" title="Sair">Sair</button>
 </header>
 
 <div class="legend">
@@ -552,17 +551,11 @@ let dragId=null, expandedCols=new Set();
 // ── PERSISTENCE ───────────────────────────────────────────────────────
 function saveData() {
   localStorage.setItem('bigtd_v2', JSON.stringify(tasks));
-  if (!_sbUser) return;
-  _sb.from('gtd_data')
-    .upsert({ user_id: _sbUser.id, tasks, updated_at: new Date().toISOString() })
-    .then(({ error }) => { if (error) console.warn('saveData error:', error); });
 }
 
 async function loadData() {
-  const { data } = await _sb.from('gtd_data')
-    .select('tasks').eq('user_id', _sbUser.id).maybeSingle();
-  tasks = data?.tasks ?? [];
-  localStorage.setItem('bigtd_v2', JSON.stringify(tasks));
+  const raw = localStorage.getItem('bigtd_v2');
+  tasks = raw ? JSON.parse(raw) : seedTasks();
   await loadInbox();
 }
 
@@ -1308,9 +1301,6 @@ function removeLembrete(id) {
     document.getElementById('fm-owner-name').textContent=CFG.owner;
     return;
   }
-  const { data:{ session } } = await _sb.auth.getSession();
-  _sbUser = session?.user ?? null;
-  if(!_sbUser){ showLogin(); return; }
   await loadData();
   document.getElementById('app').classList.remove('g-hidden');
   render(); gotoView('kanban');
