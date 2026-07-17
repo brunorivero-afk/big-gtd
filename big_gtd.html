@@ -245,7 +245,12 @@ body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--
 .modal-body{padding:15px;display:flex;flex-direction:column;gap:12px;}
 .field{display:flex;flex-direction:column;gap:4px;}
 .field label{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--t2);}
-.field input[type="text"],.field input[type="datetime-local"],.field select{background:var(--raised);border:1px solid var(--brd);border-radius:var(--r);color:var(--t1);font-family:inherit;font-size:13px;padding:7px 9px;outline:none;width:100%;transition:border-color .12s;-webkit-appearance:none;}
+.field input[type="text"],.field input[type="datetime-local"],.field select,.field textarea{background:var(--raised);border:1px solid var(--brd);border-radius:var(--r);color:var(--t1);font-family:inherit;font-size:13px;padding:7px 9px;outline:none;width:100%;transition:border-color .12s;-webkit-appearance:none;}
+.field textarea{resize:vertical;min-height:52px;}
+.field-lbl-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+.field-lbl-row label{margin-bottom:0;}
+.btn-hoje{background:none;border:1px solid var(--brd);color:var(--t2);font-size:9px;font-weight:700;padding:2px 7px;border-radius:var(--r);cursor:pointer;text-transform:uppercase;letter-spacing:.04em;transition:border-color .12s,color .12s;}
+.btn-hoje:hover{border-color:var(--acc);color:var(--acc);}
 .field input[type="datetime-local"]{color-scheme:dark light;}
 .field input:focus,.field select:focus{border-color:var(--acc);}
 .field select option{background:var(--surf);color:var(--t1);}
@@ -262,6 +267,8 @@ body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--
 .modal-ftr{display:flex;align-items:center;gap:6px;padding:11px 16px;border-top:1px solid var(--brd);flex-wrap:wrap;}
 .btn-del{background:none;border:1px solid var(--brd);color:var(--t2);font-size:12px;font-weight:600;padding:6px 10px;border-radius:var(--r);cursor:pointer;transition:border-color .12s,color .12s;}
 .btn-del:hover{border-color:var(--ph);color:var(--ph);}
+.btn-complete-del{background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.28);color:var(--pl);font-size:12px;font-weight:600;padding:6px 10px;border-radius:var(--r);cursor:pointer;transition:background .12s;}
+.btn-complete-del:hover{background:rgba(52,211,153,.2);}
 .btn-cancel{margin-left:auto;background:none;border:1px solid var(--brd);color:var(--t2);font-size:12px;font-weight:600;padding:6px 10px;border-radius:var(--r);cursor:pointer;}
 .btn-cancel:hover{border-color:var(--brd-hi);color:var(--t1);}
 .btn-next{background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);color:var(--pm);font-size:12px;font-weight:700;padding:6px 10px;border-radius:var(--r);cursor:pointer;transition:background .12s;}
@@ -454,6 +461,10 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:2px;}
         <label>Título</label>
         <input type="text" id="f-title" placeholder="O que precisa ser feito?" autocomplete="off">
       </div>
+      <div class="field">
+        <label>Descrição</label>
+        <textarea id="f-desc" placeholder="Detalhes, contexto..." rows="3"></textarea>
+      </div>
       <div class="row2">
         <div class="field">
           <label>Categoria</label>
@@ -473,7 +484,10 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:2px;}
       </div>
       <div class="row2">
         <div class="field">
-          <label>Quando fazer</label>
+          <div class="field-lbl-row">
+            <label>Quando fazer</label>
+            <button type="button" class="btn-hoje" onclick="setQuandoHoje()">Hoje</button>
+          </div>
           <input type="date" id="f-quando">
         </div>
         <div class="field">
@@ -516,6 +530,7 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:2px;}
     </div>
     <div class="modal-ftr">
       <button class="btn-del"    id="btn-del"  onclick="deleteTask()" style="display:none">Excluir</button>
+      <button class="btn-complete-del" id="btn-complete-del" onclick="completeAndDelete()" style="display:none">✓ Concluir e excluir</button>
       <button class="btn-cancel"               onclick="closeModal()">Cancelar</button>
       <button class="btn-next"   id="btn-next" onclick="saveAndNext()" style="display:none">Continuar tarefa</button>
       <button class="btn-save"   id="btn-save" onclick="saveTask()">Criar</button>
@@ -611,7 +626,7 @@ function fmtDate(ds) {
 }
 function dateToCol(ds) {
   if(!ds) return 'hoje';
-  const diff=Math.round((new Date(ds+'T12:00:00')-new Date().setHours(0,0,0,0))/86400000);
+  const diff=Math.round((new Date(ds+'T00:00:00')-new Date().setHours(0,0,0,0))/86400000);
   if(diff<=0) return 'hoje';
   if(diff<=7) return 'semana';
   return 'aguardando';
@@ -1052,6 +1067,7 @@ function openModal(id=null,defaultCol='hoje',prefill=null){
   document.getElementById('modal-title').textContent =t?'Editar tarefa':'Nova tarefa';
   document.getElementById('modal-source').textContent=prefill?.source||'';
   document.getElementById('f-title').value =t?t.title :(prefill?.title ||'');
+  document.getElementById('f-desc').value  =t?(t.desc||''):(prefill?.desc||'');
   document.getElementById('f-quando').value=t?(t.quando||colToDate(t.col)):colToDate(defaultCol);
   document.getElementById('f-due').value   =t?(t.due||''):(prefill?.due||'');
   document.getElementById('f-person').value=t?t.person:(prefill?.person||'');
@@ -1062,6 +1078,7 @@ function openModal(id=null,defaultCol='hoje',prefill=null){
   document.getElementById('f-lembrete').value = lemVal;
   document.getElementById('btn-clr-lem').classList.toggle('g-hidden', !lemVal);
   document.getElementById('btn-del').style.display =(t)?'':'none';
+  document.getElementById('btn-complete-del').style.display=(t)?'':'none';
   document.getElementById('btn-next').style.display=(t||activeInboxId)?'':'none';
   document.getElementById('btn-save').textContent  =t?'Salvar':'Criar';
   setSeg('cat',t?t.cat:(prefill?.cat||'c'));
@@ -1090,6 +1107,7 @@ function getFormData(){
   const quando=document.getElementById('f-quando').value;
   return {
     title:  document.getElementById('f-title').value.trim(),
+    desc:   document.getElementById('f-desc').value.trim(),
     cat:formCat, pri:formPri,
     col:    dateToCol(quando),
     quando,
@@ -1147,6 +1165,16 @@ function deleteTask(){
   if(!editId||!confirm('Excluir esta tarefa?'))return;
   tasks=tasks.filter(t=>t.id!==editId);
   saveData();render();closeModal();toast('Tarefa excluída');
+}
+
+function completeAndDelete(){
+  if(!editId||!confirm('Concluir e excluir esta tarefa?'))return;
+  tasks=tasks.filter(t=>t.id!==editId);
+  saveData();render();closeModal();toast('✓ Concluída e excluída');
+}
+
+function setQuandoHoje(){
+  document.getElementById('f-quando').value=colToDate('hoje');
 }
 
 function hlField(id){
