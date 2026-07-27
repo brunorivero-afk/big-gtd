@@ -780,28 +780,35 @@ function cardHTML(t) {
   </div>`;
 }
 
-function renderKanban() {
-  const filt = activeFilter==='all' ? tasks : tasks.filter(t=>t.cat===activeFilter);
-  document.getElementById('view-kanban').innerHTML = COLS.map(col=>{
-    const all     = sortByPri(filt.filter(t=>t.col===col.key));
-    const exp     = expandedCols.has(col.key);
-    const visible = exp ? all : all.slice(0,COL_LIMIT);
-    const hidden  = all.length - COL_LIMIT;
-    const more    = !exp && hidden>0
-      ? `<div class="col-expand" onclick="expandCol('${col.key}')">＋ ${hidden} tarefa${hidden>1?'s':''}</div>` : '';
-    return `
-    <div class="kcol" data-col="${col.key}"
-         ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event,'${col.key}')">
-      <div class="kch"><div class="kct">${col.label}</div><div class="kcn">${all.length}</div></div>
-      <div class="cards-area">${visible.length?visible.map(cardHTML).join(''):'<div class="empty-col">Sem tarefas</div>'}</div>
-      ${more}
-      <div class="col-add" onclick="openModal(null,'${col.key}')">＋ adicionar</div>
-    </div>`;
-  }).join('') + `
+function colHTML(col, filt) {
+  const all     = sortByPri(filt.filter(t=>t.col===col.key));
+  const exp     = expandedCols.has(col.key);
+  const visible = exp ? all : all.slice(0,COL_LIMIT);
+  const hidden  = all.length - COL_LIMIT;
+  const more    = !exp && hidden>0
+    ? `<div class="col-expand" onclick="expandCol('${col.key}')">＋ ${hidden} tarefa${hidden>1?'s':''}</div>` : '';
+  return `
+  <div class="kcol" data-col="${col.key}"
+       ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event,'${col.key}')">
+    <div class="kch"><div class="kct">${col.label}</div><div class="kcn">${all.length}</div></div>
+    <div class="cards-area">${visible.length?visible.map(cardHTML).join(''):'<div class="empty-col">Sem tarefas</div>'}</div>
+    ${more}
+    <div class="col-add" onclick="openModal(null,'${col.key}')">＋ adicionar</div>
+  </div>`;
+}
+
+const NOTES_HTML = `
     <div class="kcol">
       <div class="kch"><div class="kct">Notas &amp; Ideias</div></div>
       <div class="notes-wrap" id="notes-wrap"></div>
     </div>`;
+
+function renderKanban() {
+  const filt = activeFilter==='all' ? tasks : tasks.filter(t=>t.cat===activeFilter);
+  document.getElementById('view-kanban').innerHTML =
+    COLS.filter(c=>c.key!=='aguardando').map(c=>colHTML(c,filt)).join('') +
+    NOTES_HTML +
+    colHTML(COLS.find(c=>c.key==='aguardando'), filt);
   renderNotesCard();
 }
 
