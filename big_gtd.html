@@ -81,8 +81,15 @@ body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--
 .note-card:hover{border-color:var(--brd-hi);}
 .note-card.note-empty{color:var(--t3);font-style:italic;}
 .modal-notes{max-width:520px;}
-.notes-modal-textarea{display:block;width:100%;min-height:360px;background:var(--raised);border:1px solid var(--brd);border-radius:var(--r);padding:11px;font-size:13px;line-height:1.6;color:var(--t1);font-family:inherit;resize:vertical;outline:none;overflow-wrap:anywhere;transition:border-color .12s;}
+.notes-modal-textarea{display:block;width:100%;min-height:360px;max-height:60vh;overflow-y:auto;background:var(--raised);border:1px solid var(--brd);border-radius:var(--r);padding:11px;font-size:13px;line-height:1.6;color:var(--t1);font-family:inherit;resize:vertical;outline:none;overflow-wrap:anywhere;transition:border-color .12s;}
 .notes-modal-textarea:focus{border-color:var(--acc);}
+.notes-modal-textarea:empty:before{content:attr(data-placeholder);color:var(--t3);}
+.notes-toolbar{display:flex;gap:4px;margin-bottom:8px;}
+.notes-tbtn{background:var(--raised);border:1px solid var(--brd);color:var(--t2);width:28px;height:28px;border-radius:var(--r);cursor:pointer;font-size:12px;transition:border-color .12s,color .12s;}
+.notes-tbtn:hover{border-color:var(--brd-hi);color:var(--t1);}
+.notes-tbtn.ntb-b{font-weight:800;}
+.notes-tbtn.ntb-i{font-style:italic;}
+.notes-tbtn.ntb-u{text-decoration:underline;}
 
 /* CARD */
 .card{background:var(--surf);border:1px solid var(--brd);border-left:3px solid var(--com);border-radius:var(--r);padding:10px 11px 9px;margin-bottom:7px;cursor:pointer;position:relative;transition:border-color .12s,box-shadow .12s,transform .1s;user-select:none;}
@@ -555,7 +562,12 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:2px;}
       <button class="modal-close" onclick="closeNotesModal()">✕</button>
     </div>
     <div class="modal-body">
-      <textarea id="notes-modal-text" class="notes-modal-textarea" placeholder="Ideias, lembranças, coisas que não posso deixar passar..."></textarea>
+      <div class="notes-toolbar">
+        <button type="button" class="notes-tbtn ntb-b" onclick="notesFormat('bold')" title="Negrito">B</button>
+        <button type="button" class="notes-tbtn ntb-i" onclick="notesFormat('italic')" title="Itálico">I</button>
+        <button type="button" class="notes-tbtn ntb-u" onclick="notesFormat('underline')" title="Sublinhado">U</button>
+      </div>
+      <div id="notes-modal-text" class="notes-modal-textarea" contenteditable="true" data-placeholder="Ideias, lembranças, coisas que não posso deixar passar..."></div>
     </div>
     <div class="modal-ftr">
       <button class="btn-cancel" onclick="closeNotesModal()">Fechar</button>
@@ -814,19 +826,20 @@ function renderKanban() {
 
 // ── NOTES ─────────────────────────────────────────────────────────────
 function loadNotes() { return localStorage.getItem('bigtd_notes_v1') || ''; }
-function saveNotes(text) { localStorage.setItem('bigtd_notes_v1', text); }
+function saveNotes(html) { localStorage.setItem('bigtd_notes_v1', html); }
 
 function renderNotesCard() {
   const wrap = document.getElementById('notes-wrap');
   if (!wrap) return;
-  const text = loadNotes();
-  wrap.innerHTML = text
-    ? `<div class="note-card" onclick="openNotesModal()">${esc(text)}</div>`
+  const html = loadNotes();
+  const isEmpty = !html.replace(/<[^>]*>/g,'').trim();
+  wrap.innerHTML = !isEmpty
+    ? `<div class="note-card" onclick="openNotesModal()">${html}</div>`
     : `<div class="note-card note-empty" onclick="openNotesModal()">Ideias, lembranças, coisas que não posso deixar passar...</div>`;
 }
 
 function openNotesModal() {
-  document.getElementById('notes-modal-text').value = loadNotes();
+  document.getElementById('notes-modal-text').innerHTML = loadNotes();
   document.getElementById('notes-overlay').classList.remove('hidden');
   setTimeout(() => document.getElementById('notes-modal-text').focus(), 60);
 }
@@ -836,10 +849,15 @@ function closeNotesModal() {
 }
 
 function saveNotesModal() {
-  saveNotes(document.getElementById('notes-modal-text').value);
+  saveNotes(document.getElementById('notes-modal-text').innerHTML);
   renderNotesCard();
   closeNotesModal();
   toast('Notas salvas');
+}
+
+function notesFormat(cmd) {
+  document.getElementById('notes-modal-text').focus();
+  document.execCommand(cmd, false, null);
 }
 
 function expandCol(key) { expandedCols.add(key); renderKanban(); }
