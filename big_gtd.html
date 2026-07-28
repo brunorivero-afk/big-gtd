@@ -62,7 +62,7 @@ body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--
 .lsep{color:var(--brd-hi);}
 
 /* THIN TOUCH-STYLE SCROLLBARS */
-#view-kanban,.note-card,.notes-modal-textarea{scrollbar-width:thin;scrollbar-color:var(--brd-hi) transparent;}
+#view-kanban,.note-card,.notes-modal-textarea,.links-list{scrollbar-width:thin;scrollbar-color:var(--brd-hi) transparent;}
 #view-kanban::-webkit-scrollbar,.note-card::-webkit-scrollbar,.notes-modal-textarea::-webkit-scrollbar{width:5px;height:5px;}
 #view-kanban::-webkit-scrollbar-track,.note-card::-webkit-scrollbar-track,.notes-modal-textarea::-webkit-scrollbar-track{background:transparent;}
 #view-kanban::-webkit-scrollbar-thumb,.note-card::-webkit-scrollbar-thumb,.notes-modal-textarea::-webkit-scrollbar-thumb{background:var(--brd-hi);border-radius:10px;}
@@ -91,6 +91,36 @@ body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--
 .notes-modal-textarea{display:block;width:100%;min-height:360px;max-height:60vh;overflow-y:auto;background:var(--raised);border:1px solid var(--brd);border-radius:var(--r);padding:11px;font-size:13px;line-height:1.6;color:var(--t1);font-family:inherit;resize:vertical;outline:none;overflow-wrap:anywhere;transition:border-color .12s;}
 .notes-modal-textarea:focus{border-color:var(--acc);}
 .notes-modal-textarea:empty:before{content:attr(data-placeholder);color:var(--t3);}
+
+/* WEATHER & LINKS COLUMN */
+.side-wrap{padding:9px;display:flex;flex-direction:column;gap:9px;}
+.weather-card{display:block;background:var(--surf);border:1px solid var(--brd);border-radius:var(--r);padding:12px;text-decoration:none;color:inherit;transition:border-color .12s,box-shadow .12s;}
+.weather-card:hover{border-color:var(--brd-hi);box-shadow:0 3px 12px rgba(0,0,0,.15);}
+.wc-top{display:flex;align-items:center;gap:6px;margin-bottom:4px;}
+.wc-icon{font-size:16px;}
+.wc-city{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);}
+.wc-temp{font-size:24px;font-weight:800;color:var(--t1);line-height:1;margin-bottom:2px;}
+.wc-cond{font-size:12px;color:var(--t2);margin-bottom:4px;}
+.wc-range{font-size:11px;color:var(--t3);}
+.wc-loading{font-size:12px;color:var(--t3);font-style:italic;}
+.links-list{display:flex;flex-direction:column;gap:4px;max-height:280px;overflow-y:auto;margin-bottom:8px;}
+.link-row{display:flex;align-items:center;gap:4px;background:var(--surf);border:1px solid var(--brd);border-radius:var(--r);padding:6px 8px;transition:border-color .12s;}
+.link-row:hover{border-color:var(--brd-hi);}
+.link-item{flex:1;font-size:12px;color:var(--acc);text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.link-item:hover{text-decoration:underline;}
+.link-del{background:none;border:none;color:var(--t3);font-size:11px;cursor:pointer;padding:2px 4px;border-radius:3px;flex-shrink:0;transition:color .12s;}
+.link-del:hover{color:var(--ph);}
+.links-empty{color:var(--t3);font-size:11px;text-align:center;padding:10px;font-style:italic;}
+.link-add-btn{width:100%;background:none;border:1px dashed var(--brd);color:var(--t3);font-size:11px;font-weight:600;padding:7px;border-radius:var(--r);cursor:pointer;transition:border-color .12s,color .12s;}
+.link-add-btn:hover{border-color:var(--acc);color:var(--acc);}
+.link-form{display:flex;flex-direction:column;gap:6px;}
+.link-form input{background:var(--raised);border:1px solid var(--brd);border-radius:var(--r);color:var(--t1);font-family:inherit;font-size:12px;padding:7px 9px;outline:none;width:100%;transition:border-color .12s;}
+.link-form input:focus{border-color:var(--acc);}
+.link-form-btns{display:flex;gap:6px;}
+.link-form-cancel{flex:1;background:none;border:1px solid var(--brd);color:var(--t2);font-size:11px;font-weight:600;padding:6px;border-radius:var(--r);cursor:pointer;}
+.link-form-cancel:hover{border-color:var(--brd-hi);color:var(--t1);}
+.link-form-save{flex:1;background:var(--acc);border:none;color:#fff;font-size:11px;font-weight:700;padding:6px;border-radius:var(--r);cursor:pointer;transition:opacity .12s;}
+.link-form-save:hover{opacity:.86;}
 .notes-toolbar{display:flex;gap:4px;margin-bottom:8px;}
 .notes-tbtn{background:var(--raised);border:1px solid var(--brd);color:var(--t2);width:28px;height:28px;border-radius:var(--r);cursor:pointer;font-size:12px;transition:border-color .12s,color .12s;}
 .notes-tbtn:hover{border-color:var(--brd-hi);color:var(--t1);}
@@ -825,11 +855,22 @@ const NOTES_HTML = `
       <div class="notes-wrap" id="notes-wrap"></div>
     </div>`;
 
+const SIDE_HTML = `
+    <div class="kcol">
+      <div class="kch"><div class="kct">Clima &amp; Links</div></div>
+      <div class="side-wrap">
+        <div id="weather-wrap"></div>
+        <div id="links-wrap"></div>
+      </div>
+    </div>`;
+
 function renderKanban() {
   const filt = activeFilter==='all' ? tasks : tasks.filter(t=>t.cat===activeFilter);
   document.getElementById('view-kanban').innerHTML =
-    COLS.map(c=>colHTML(c,filt)).join('') + NOTES_HTML;
+    COLS.map(c=>colHTML(c,filt)).join('') + NOTES_HTML + SIDE_HTML;
   renderNotesCard();
+  renderWeatherCard();
+  renderLinksCard();
 }
 
 // ── NOTES ─────────────────────────────────────────────────────────────
@@ -869,6 +910,126 @@ function notesFormat(cmd) {
 }
 
 function expandCol(key) { expandedCols.add(key); renderKanban(); }
+
+// ── WEATHER ───────────────────────────────────────────────────────────
+const WEATHER_CITY = 'Araruama';
+const WEATHER_LAT = -22.8728;
+const WEATHER_LON = -42.3437;
+const WEATHER_LINK = 'https://www.google.com/search?q=' + encodeURIComponent('previsão do tempo em ' + WEATHER_CITY);
+let weatherData = null;
+
+function weatherIcon(code) {
+  if (code === 0) return '☀️';
+  if ([1,2].includes(code)) return '🌤️';
+  if (code === 3) return '☁️';
+  if ([45,48].includes(code)) return '🌫️';
+  if ([51,53,55,56,57,61,63,65,80,81,82].includes(code)) return '🌧️';
+  if ([66,67,71,73,75,77,85,86].includes(code)) return '❄️';
+  if ([95,96,99].includes(code)) return '⛈️';
+  return '🌡️';
+}
+function weatherLabel(code) {
+  const map = {0:'Céu limpo',1:'Poucas nuvens',2:'Parcialmente nublado',3:'Nublado',45:'Neblina',48:'Neblina',51:'Garoa',53:'Garoa',55:'Garoa',56:'Garoa gelada',57:'Garoa gelada',61:'Chuva fraca',63:'Chuva',65:'Chuva forte',66:'Chuva gelada',67:'Chuva gelada',71:'Neve fraca',73:'Neve',75:'Neve forte',77:'Neve',80:'Pancadas de chuva',81:'Pancadas de chuva',82:'Pancadas fortes',85:'Pancadas de neve',86:'Pancadas de neve',95:'Tempestade',96:'Tempestade',99:'Tempestade'};
+  return map[code] || '—';
+}
+
+async function loadWeather() {
+  const cached = JSON.parse(localStorage.getItem('bigtd_weather_v1') || 'null');
+  const now = Date.now();
+  if (cached && (now - cached.fetchedAt) < 3600000) {
+    weatherData = cached.data;
+    renderWeatherCard();
+    return;
+  }
+  try {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${WEATHER_LAT}&longitude=${WEATHER_LON}&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min&timezone=America%2FSao_Paulo`;
+    const res = await fetch(url);
+    const json = await res.json();
+    weatherData = {
+      temp: Math.round(json.current.temperature_2m),
+      code: json.current.weather_code,
+      max: Math.round(json.daily.temperature_2m_max[0]),
+      min: Math.round(json.daily.temperature_2m_min[0]),
+    };
+    localStorage.setItem('bigtd_weather_v1', JSON.stringify({ data: weatherData, fetchedAt: now }));
+  } catch (e) {
+    weatherData = cached ? cached.data : null;
+  }
+  renderWeatherCard();
+}
+
+function renderWeatherCard() {
+  const wrap = document.getElementById('weather-wrap');
+  if (!wrap) return;
+  if (!weatherData) {
+    wrap.innerHTML = `<a class="weather-card" href="${esc(WEATHER_LINK)}" target="_blank" onclick="event.stopPropagation()">
+      <div class="wc-city">${esc(WEATHER_CITY)}</div>
+      <div class="wc-loading">Carregando clima...</div>
+    </a>`;
+    return;
+  }
+  wrap.innerHTML = `<a class="weather-card" href="${esc(WEATHER_LINK)}" target="_blank" onclick="event.stopPropagation()">
+    <div class="wc-top">
+      <span class="wc-icon">${weatherIcon(weatherData.code)}</span>
+      <span class="wc-city">${esc(WEATHER_CITY)}</span>
+    </div>
+    <div class="wc-temp">${weatherData.temp}°</div>
+    <div class="wc-cond">${esc(weatherLabel(weatherData.code))}</div>
+    <div class="wc-range">Máx ${weatherData.max}° · Mín ${weatherData.min}°</div>
+  </a>`;
+}
+
+// ── LINKS ─────────────────────────────────────────────────────────────
+function loadLinks() {
+  try { return JSON.parse(localStorage.getItem('bigtd_links_v1') || '[]'); }
+  catch (e) { return []; }
+}
+function saveLinks(arr) { localStorage.setItem('bigtd_links_v1', JSON.stringify(arr)); }
+
+function renderLinksCard() {
+  const wrap = document.getElementById('links-wrap');
+  if (!wrap) return;
+  const links = loadLinks();
+  wrap.innerHTML = `
+    <div class="links-list">
+      ${links.length ? links.map(l => `
+        <div class="link-row">
+          <a href="${esc(l.url)}" target="_blank" class="link-item" onclick="event.stopPropagation()">${esc(l.title)}</a>
+          <button class="link-del" onclick="event.stopPropagation();removeLink('${esc(l.id)}')" title="Remover">✕</button>
+        </div>`).join('') : '<div class="links-empty">Nenhum link ainda.</div>'}
+    </div>
+    <div id="link-form-wrap"><button class="link-add-btn" onclick="showLinkForm()">＋ adicionar link</button></div>`;
+}
+
+function showLinkForm() {
+  document.getElementById('link-form-wrap').innerHTML = `
+    <div class="link-form">
+      <input type="text" id="lf-title" placeholder="Nome (ex: Mercado Livre)">
+      <input type="text" id="lf-url" placeholder="https://...">
+      <div class="link-form-btns">
+        <button class="link-form-cancel" onclick="renderLinksCard()">Cancelar</button>
+        <button class="link-form-save" onclick="addLink()">Adicionar</button>
+      </div>
+    </div>`;
+  setTimeout(() => document.getElementById('lf-title').focus(), 30);
+}
+
+function addLink() {
+  const title = document.getElementById('lf-title').value.trim();
+  let url = document.getElementById('lf-url').value.trim();
+  if (!title || !url) return;
+  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+  const links = loadLinks();
+  links.push({ id: uid(), title, url });
+  saveLinks(links);
+  renderLinksCard();
+  toast('Link adicionado');
+}
+
+function removeLink(id) {
+  saveLinks(loadLinks().filter(l => l.id !== id));
+  renderLinksCard();
+}
 
 // ── FOCO ──────────────────────────────────────────────────────────────
 function renderFoco() {
@@ -1426,6 +1587,7 @@ function removeLembrete(id) {
   await loadData();
   document.getElementById('app').classList.remove('g-hidden');
   render(); gotoView('kanban');
+  loadWeather();
   requestNotifPermission();
   checkReminders();
   setInterval(checkReminders, 30000);
