@@ -61,6 +61,13 @@ body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--
 .ldot{width:6px;height:6px;border-radius:50%;}
 .lsep{color:var(--brd-hi);}
 
+/* THIN TOUCH-STYLE SCROLLBARS */
+#view-kanban,.note-card,.notes-modal-textarea{scrollbar-width:thin;scrollbar-color:var(--brd-hi) transparent;}
+#view-kanban::-webkit-scrollbar,.note-card::-webkit-scrollbar,.notes-modal-textarea::-webkit-scrollbar{width:5px;height:5px;}
+#view-kanban::-webkit-scrollbar-track,.note-card::-webkit-scrollbar-track,.notes-modal-textarea::-webkit-scrollbar-track{background:transparent;}
+#view-kanban::-webkit-scrollbar-thumb,.note-card::-webkit-scrollbar-thumb,.notes-modal-textarea::-webkit-scrollbar-thumb{background:var(--brd-hi);border-radius:10px;}
+#view-kanban::-webkit-scrollbar-thumb:hover,.note-card::-webkit-scrollbar-thumb:hover,.notes-modal-textarea::-webkit-scrollbar-thumb:hover{background:var(--acc);}
+
 /* KANBAN */
 #view-kanban{display:flex;gap:10px;padding:14px 14px 24px;overflow-x:auto;align-items:flex-start;min-height:calc(100vh - 90px);}
 .kcol{width:264px;flex-shrink:0;background:var(--raised);border:1px solid var(--brd);border-radius:7px;transition:border-color .15s,background .15s;overflow:hidden;}
@@ -92,17 +99,18 @@ body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--
 .notes-tbtn.ntb-u{text-decoration:underline;}
 
 /* CARD */
-.card{background:var(--surf);border:1px solid var(--brd);border-left:3px solid var(--com);border-radius:var(--r);padding:10px 11px 9px;margin-bottom:7px;cursor:pointer;position:relative;transition:border-color .12s,box-shadow .12s,transform .1s;user-select:none;}
+.card{background:var(--surf);border:1px solid var(--brd);border-left:3px solid var(--com);border-radius:var(--r);padding:10px 11px 9px;margin-bottom:7px;cursor:pointer;position:relative;transition:border-color .12s,box-shadow .12s,transform .1s;user-select:none;height:172px;display:flex;flex-direction:column;}
 .card[data-cat="p"]{border-left-color:var(--per);}
 .card:hover{border-color:var(--brd-hi);box-shadow:0 3px 12px rgba(0,0,0,.2);transform:translateY(-1px);}
 .card.done{opacity:.38;}
 .card.dragging{opacity:.3;transform:rotate(1.5deg);}
+.card-body{flex:1 1 0;min-height:0;overflow:hidden;}
 .ctop{display:flex;align-items:flex-start;gap:6px;margin-bottom:6px;}
 .pdot{width:7px;height:7px;border-radius:50%;background:var(--ph);flex-shrink:0;margin-top:4px;}
 .pdot.m{background:var(--pm);}.pdot.l{background:var(--pl);}.pdot.d{background:var(--t3);}
-.ctit{font-size:13px;font-weight:500;color:var(--t1);line-height:1.3;flex:1;padding-right:8px;word-break:break-word;}
+.ctit{font-size:13px;font-weight:500;color:var(--t1);line-height:1.3;flex:1;padding-right:8px;word-break:break-word;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
 .card.done .ctit{text-decoration:line-through;color:var(--t3);}
-.cmeta{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px;}
+.cmeta{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px;overflow:hidden;max-height:22px;}
 .chip{font-size:9px;font-weight:700;letter-spacing:.05em;border-radius:3px;padding:2px 5px;text-transform:uppercase;}
 .ch-c{color:var(--com);background:rgba(255,107,61,.11);}
 .ch-p{color:var(--per);background:rgba(34,211,180,.11);}
@@ -115,7 +123,7 @@ body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--
 .cdue{font-size:10px;color:var(--t3);}
 .card-link{display:inline-block;margin-top:5px;font-size:10px;color:var(--acc);text-decoration:none;word-break:break-all;}
 .card-link:hover{text-decoration:underline;}
-.card-acts{display:flex;gap:4px;margin-top:7px;opacity:0;transition:opacity .15s;pointer-events:none;}
+.card-acts{display:flex;gap:4px;margin-top:7px;opacity:0;transition:opacity .15s;pointer-events:none;flex-shrink:0;}
 .card:hover .card-acts{opacity:1;pointer-events:auto;}
 .cact{flex:1;background:var(--raised);border:1px solid var(--brd);border-radius:3px;color:var(--t2);font-size:10px;font-weight:700;padding:5px 3px;cursor:pointer;text-align:center;transition:background .12s,border-color .12s,color .12s;}
 .cact-ok:hover{border-color:var(--pl);color:var(--pl);background:rgba(52,211,153,.1);}
@@ -170,7 +178,7 @@ body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--
 /* DASHBOARD */
 .dash{padding:18px 16px 32px;max-width:880px;}
 .dash-title{font-size:15px;font-weight:800;margin-bottom:14px;}
-.dash-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:18px;}
+.dash-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:18px;}
 @media(max-width:680px){.dash-grid{grid-template-columns:repeat(2,1fr);}}
 .dcard{background:var(--surf);border:1px solid var(--brd);border-radius:7px;padding:13px 15px;}
 .dcard-val{font-size:26px;font-weight:800;line-height:1;margin-bottom:3px;}
@@ -590,7 +598,7 @@ const _sb = supabase.createClient(CFG.supabaseUrl, CFG.supabaseKey);
 let _sbUser = null;
 
 // ── CONSTANTS ─────────────────────────────────────────────────────────
-const COLS     = [{key:'hoje',label:'Hoje'},{key:'semana',label:'Esta Semana'},{key:'aguardando',label:'Aguardando'},{key:'concluido',label:'Concluído'}];
+const COLS     = [{key:'hoje',label:'Hoje'},{key:'semana',label:'Esta Semana'},{key:'concluido',label:'Concluído'}];
 const PRI_ORD  = {h:0,m:1,l:2};
 const COL_LIMIT= 6;
 
@@ -609,6 +617,7 @@ function saveData() {
 async function loadData() {
   const raw = localStorage.getItem('bigtd_v2');
   tasks = raw ? JSON.parse(raw) : seedTasks();
+  tasks.forEach(t => { if (t.col === 'aguardando') t.col = 'semana'; });
   await loadInbox();
 }
 
@@ -636,8 +645,8 @@ function seedTasks() {
     mk('Revisão financeira mensal',         'p','h','semana','Sex','', 'mensal', 'Finanças'),
     mk('Check semanal de métricas',         'c','m','semana','Sex','Bruno','semanal','Geral'),
     mk('Médico — check anual',              'p','l','semana','','',    '',       'Saúde'),
-    mk('Aguardando Excel controle interno', 'c','l','aguardando','','Sócio','', 'BIDATX'),
-    mk('Reunião de alinhamento Sicoob',     'c','m','aguardando','','Pedro','', 'Sicoob'),
+    mk('Aguardando Excel controle interno', 'c','l','semana','','Sócio','', 'BIDATX'),
+    mk('Reunião de alinhamento Sicoob',     'c','m','semana','','Pedro','', 'Sicoob'),
   ];
 }
 
@@ -666,13 +675,11 @@ function dateToCol(ds) {
   if(!ds) return 'hoje';
   const diff=Math.round((new Date(ds+'T00:00:00')-new Date().setHours(0,0,0,0))/86400000);
   if(diff<=0) return 'hoje';
-  if(diff<=7) return 'semana';
-  return 'aguardando';
+  return 'semana';
 }
 function colToDate(col) {
   const d=new Date();
-  if(col==='semana')    d.setDate(d.getDate()+3);
-  if(col==='aguardando') d.setDate(d.getDate()+14);
+  if(col==='semana') d.setDate(d.getDate()+3);
   return d.toISOString().split('T')[0];
 }
 function showLogin() {
@@ -774,20 +781,23 @@ function cardHTML(t) {
   <div class="card${done?' done':''}" data-id="${esc(t.id)}" data-cat="${esc(t.cat)}"
        draggable="true" onclick="openModal('${esc(t.id)}')"
        ondragstart="onDragStart(event,'${esc(t.id)}')" ondragend="onDragEnd()">
-    <div class="ctop">
-      <div class="${dotCls(t)}"></div>
-      <div class="ctit">${esc(t.title)}</div>
+    <div class="card-body">
+      <div class="ctop">
+        <div class="${dotCls(t)}"></div>
+        <div class="ctit">${esc(t.title)}</div>
+      </div>
+      <div class="cmeta">
+        <span class="chip ${t.cat==='c'?'ch-c':'ch-p'}">${t.cat==='c'?'Comercial':'Pessoal'}</span>
+        ${t.rec?`<span class="chip ch-r">↻ ${esc(t.rec)}</span>`:''}
+        ${t.origin==='external'?`<span class="chip ch-ext">📥 externo</span>`:''}
+        ${t.tag?`<span class="chip ch-t">${esc(t.tag)}</span>`:''}
+        ${t.lembrete&&!t.lembreteOk?`<span class="chip ch-lem">🔔 ${fmtLembreteChip(t.lembrete)}</span>`:''}
+      </div>
+      ${hasFoot?`<div class="cfot"><div class="cpersn">${av(t.person)}<span>${esc(t.person||'')}</span></div><div class="cdue">${fmtDate(t.due)}</div></div>`:''}
+      ${t.link?`<a class="card-link" href="${esc(t.link)}" target="_blank" onclick="event.stopPropagation()">🔗 Ver link</a>`:''}
+      ${renew}
     </div>
-    <div class="cmeta">
-      <span class="chip ${t.cat==='c'?'ch-c':'ch-p'}">${t.cat==='c'?'Comercial':'Pessoal'}</span>
-      ${t.rec?`<span class="chip ch-r">↻ ${esc(t.rec)}</span>`:''}
-      ${t.origin==='external'?`<span class="chip ch-ext">📥 externo</span>`:''}
-      ${t.tag?`<span class="chip ch-t">${esc(t.tag)}</span>`:''}
-      ${t.lembrete&&!t.lembreteOk?`<span class="chip ch-lem">🔔 ${fmtLembreteChip(t.lembrete)}</span>`:''}
-    </div>
-    ${hasFoot?`<div class="cfot"><div class="cpersn">${av(t.person)}<span>${esc(t.person||'')}</span></div><div class="cdue">${fmtDate(t.due)}</div></div>`:''}
-    ${t.link?`<a class="card-link" href="${esc(t.link)}" target="_blank" onclick="event.stopPropagation()">🔗 Ver link</a>`:''}
-    ${renew}${acts}
+    ${acts}
     <div class="dgr"><span></span><span></span><span></span></div>
   </div>`;
 }
@@ -818,9 +828,7 @@ const NOTES_HTML = `
 function renderKanban() {
   const filt = activeFilter==='all' ? tasks : tasks.filter(t=>t.cat===activeFilter);
   document.getElementById('view-kanban').innerHTML =
-    COLS.filter(c=>c.key!=='aguardando').map(c=>colHTML(c,filt)).join('') +
-    NOTES_HTML +
-    colHTML(COLS.find(c=>c.key==='aguardando'), filt);
+    COLS.map(c=>colHTML(c,filt)).join('') + NOTES_HTML;
   renderNotesCard();
 }
 
@@ -942,7 +950,6 @@ function renderDashboard() {
   const conc  = tasks.filter(t=>t.col==='concluido').length;
   const open  = total-conc;
   const hj    = tasks.filter(t=>t.col==='hoje').length;
-  const aw    = tasks.filter(t=>t.col==='aguardando').length;
   const cHoje = tasks.filter(t=>t.col==='concluido'&&isToday(t.completedAt)).length;
   const pct   = total>0?Math.round(conc/total*100):0;
 
@@ -977,7 +984,6 @@ function renderDashboard() {
     <div class="dcard"><div class="dcard-val">${open}</div><div class="dcard-lbl">Abertas</div></div>
     <div class="dcard"><div class="dcard-val" style="color:var(--acc)">${hj}</div><div class="dcard-lbl">Hoje</div></div>
     <div class="dcard"><div class="dcard-val" style="color:var(--pl)">${conc}</div><div class="dcard-lbl">Concluídas</div><div class="dcard-sub">+${cHoje} hoje</div></div>
-    <div class="dcard"><div class="dcard-val" style="color:var(--pm)">${aw}</div><div class="dcard-lbl">Aguardando</div></div>
   </div>
 
   <div class="dprogress">
