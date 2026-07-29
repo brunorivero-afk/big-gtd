@@ -448,6 +448,7 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:2px;}
     <button class="nav-btn" id="nb-formview"  onclick="gotoView('form-view')">🔗 Formulário</button>
     <button class="nav-btn" id="nb-inbox"      onclick="gotoView('inbox')">📥 Entrada <span class="ibadge" id="ibadge"></span></button>
     <button class="nav-btn" id="nb-lembretes" onclick="gotoView('lembretes')">🔔 Lembretes <span class="lbadge" id="lbadge"></span></button>
+    <button class="nav-btn" id="nb-historico" onclick="gotoView('historico')">🕐 Histórico</button>
   </div>
 </header>
 
@@ -496,6 +497,10 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:2px;}
 
 <div id="view-lembretes" class="g-hidden">
   <div class="lem-wrap" id="lembretes-body"></div>
+</div>
+
+<div id="view-historico" class="g-hidden">
+  <div class="v-wrap" id="historico-body"></div>
 </div>
 
 </div><!-- /#app -->
@@ -682,7 +687,27 @@ async function pushSync() {
       links: loadLinks(),
       updated_at: new Date().toISOString(),
     }, { onConflict: 'sync_id' });
+
+    await _sb.from('gtd_sync_history').insert({
+      sync_id: CFG.syncId,
+      tasks,
+      notes: loadNotes(),
+      links: loadLinks(),
+    });
+    pruneHistory();
   } catch (e) { /* offline — tenta de novo no próximo save */ }
+}
+
+async function pruneHistory() {
+  try {
+    const { data } = await _sb.from('gtd_sync_history')
+      .select('id').eq('sync_id', CFG.syncId)
+      .order('created_at', { ascending: false })
+      .range(30, 999);
+    if (data && data.length) {
+      await _sb.from('gtd_sync_history').delete().in('id', data.map(r => r.id));
+    }
+  } catch (e) { /* não é crítico, tenta de novo depois */ }
 }
 
 async function pullSync() {
@@ -704,6 +729,55 @@ async function pullSync() {
       if (currentView === 'kanban') renderLinksCard();
     }
   } catch (e) { /* offline — ignora, tenta na próxima */ }
+}
+
+// ── HISTÓRICO (backups automáticos, restauráveis) ──────────────────────
+let _historicoRows = [];
+
+async function renderHistorico() {
+  const el = document.getElementById('historico-body');
+  const hdr = `<div class="v-hdr"><div class="v-title">🕐 Histórico</div><div class="v-sub">Últimas versões salvas — restaure se algo der errado</div></div>`;
+  el.innerHTML = hdr + `<div class="empty-v">Carregando...</div>`;
+  try {
+    const { data, error } = await _sb.from('gtd_sync_history')
+      .select('id, tasks, notes, links, created_at')
+      .eq('sync_id', CFG.syncId)
+      .order('created_at', { ascending: false })
+      .limit(30);
+    if (error) throw error;
+    _historicoRows = data || [];
+  } catch (e) {
+    el.innerHTML = hdr + `<div class="empty-v">Não consegui buscar o histórico agora. Confira sua conexão.</div>`;
+    return;
+  }
+  if (!_historicoRows.length) {
+    el.innerHTML = hdr + `<div class="empty-v">Nenhum backup ainda. A cada alteração salva, uma versão fica guardada aqui.</div>`;
+    return;
+  }
+  el.innerHTML = hdr + _historicoRows.map((r, i) => {
+    const d = new Date(r.created_at);
+    const label = d.toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+    const nTasks = Array.isArray(r.tasks) ? r.tasks.length : 0;
+    const nLinks = Array.isArray(r.links) ? r.links.length : 0;
+    return `
+    <div class="frow">
+      <div class="frow-title">${esc(label)} — ${nTasks} tarefa${nTasks!==1?'s':''}${nLinks?`, ${nLinks} link${nLinks!==1?'s':''}`:''}${r.notes?', com notas':''}</div>
+      <button class="fact" onclick="restoreHistorico(${i})">↺ Restaurar</button>
+    </div>`;
+  }).join('');
+}
+
+async function restoreHistorico(i) {
+  const row = _historicoRows[i];
+  if (!row) return;
+  const label = new Date(row.created_at).toLocaleString('pt-BR');
+  if (!confirm(`Restaurar a versão de ${label}? Isso substitui suas tarefas, notas e links atuais (a versão de agora também fica salva no histórico, dá pra desfazer).`)) return;
+  tasks = Array.isArray(row.tasks) ? row.tasks : [];
+  saveData();
+  saveNotes(typeof row.notes === 'string' ? row.notes : '');
+  saveLinks(Array.isArray(row.links) ? row.links : []);
+  toast('Versão restaurada');
+  gotoView('kanban');
 }
 
 async function loadInbox() {
@@ -795,8 +869,8 @@ async function doLogout() {
 
 
 // ── VIEW MANAGEMENT ───────────────────────────────────────────────────
-const VIEWS = ['kanban','foco','inbox','dashboard','form-view','lembretes'];
-const NAV   = {kanban:'nb-kanban',foco:'nb-foco',inbox:'nb-inbox',dashboard:'nb-dashboard','form-view':'nb-formview',lembretes:'nb-lembretes'};
+const VIEWS = ['kanban','foco','inbox','dashboard','form-view','lembretes','historico'];
+const NAV   = {kanban:'nb-kanban',foco:'nb-foco',inbox:'nb-inbox',dashboard:'nb-dashboard','form-view':'nb-formview',lembretes:'nb-lembretes',historico:'nb-historico'};
 
 function gotoView(v) {
   currentView = v;
@@ -814,6 +888,7 @@ function gotoView(v) {
   if (v==='dashboard') renderDashboard();
   if (v==='form-view') renderFormView();
   if (v==='lembretes') renderLembretes();
+  if (v==='historico') renderHistorico();
 }
 
 // ── FILTER ────────────────────────────────────────────────────────────
