@@ -622,6 +622,7 @@ const CFG = {
   owner:       'Bruno',
   supabaseUrl: 'https://pxcqyzbgfbwwkazmonzx.supabase.co',
   supabaseKey: 'sb_publishable_6QT2f_wCkTmpfoO_EEZlpA_BCcC8Fv8',
+  syncId:      'e7f3a982-4b6d-4c1e-9f0a-8d2c1b3e5f7a',
 };
 
 const _sb = supabase.createClient(CFG.supabaseUrl, CFG.supabaseKey);
@@ -642,13 +643,67 @@ let dragId=null, expandedCols=new Set();
 // ── PERSISTENCE ───────────────────────────────────────────────────────
 function saveData() {
   localStorage.setItem('bigtd_v2', JSON.stringify(tasks));
+  queueSync();
 }
 
 async function loadData() {
   const raw = localStorage.getItem('bigtd_v2');
   tasks = raw ? JSON.parse(raw) : seedTasks();
   tasks.forEach(t => { if (t.col === 'aguardando') t.col = 'semana'; });
+
+  try {
+    const { data } = await _sb.from('gtd_sync').select('*').eq('sync_id', CFG.syncId).maybeSingle();
+    if (data) {
+      if (Array.isArray(data.tasks)) { tasks = data.tasks; localStorage.setItem('bigtd_v2', JSON.stringify(tasks)); }
+      if (typeof data.notes === 'string') localStorage.setItem('bigtd_notes_v1', data.notes);
+      if (Array.isArray(data.links)) localStorage.setItem('bigtd_links_v1', JSON.stringify(data.links));
+    } else {
+      queueSync();
+    }
+  } catch (e) { /* offline — segue com o que tem em localStorage */ }
+
   await loadInbox();
+}
+
+// ── SYNC (Supabase — mesmo dado em qualquer aparelho, sem login) ──────
+let _syncTimer = null;
+
+function queueSync() {
+  clearTimeout(_syncTimer);
+  _syncTimer = setTimeout(pushSync, 700);
+}
+
+async function pushSync() {
+  try {
+    await _sb.from('gtd_sync').upsert({
+      sync_id: CFG.syncId,
+      tasks,
+      notes: loadNotes(),
+      links: loadLinks(),
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'sync_id' });
+  } catch (e) { /* offline — tenta de novo no próximo save */ }
+}
+
+async function pullSync() {
+  try {
+    const { data } = await _sb.from('gtd_sync').select('*').eq('sync_id', CFG.syncId).maybeSingle();
+    if (!data) return;
+    if (Array.isArray(data.tasks) && JSON.stringify(data.tasks) !== JSON.stringify(tasks)) {
+      tasks = data.tasks;
+      localStorage.setItem('bigtd_v2', JSON.stringify(tasks));
+      render();
+      if (currentView === 'foco') renderFoco();
+    }
+    if (typeof data.notes === 'string' && data.notes !== loadNotes()) {
+      localStorage.setItem('bigtd_notes_v1', data.notes);
+      if (currentView === 'kanban') renderNotesCard();
+    }
+    if (Array.isArray(data.links) && JSON.stringify(data.links) !== JSON.stringify(loadLinks())) {
+      localStorage.setItem('bigtd_links_v1', JSON.stringify(data.links));
+      if (currentView === 'kanban') renderLinksCard();
+    }
+  } catch (e) { /* offline — ignora, tenta na próxima */ }
 }
 
 async function loadInbox() {
@@ -875,7 +930,7 @@ function renderKanban() {
 
 // ── NOTES ─────────────────────────────────────────────────────────────
 function loadNotes() { return localStorage.getItem('bigtd_notes_v1') || ''; }
-function saveNotes(html) { localStorage.setItem('bigtd_notes_v1', html); }
+function saveNotes(html) { localStorage.setItem('bigtd_notes_v1', html); queueSync(); }
 
 function renderNotesCard() {
   const wrap = document.getElementById('notes-wrap');
@@ -984,7 +1039,7 @@ function loadLinks() {
   try { return JSON.parse(localStorage.getItem('bigtd_links_v1') || '[]'); }
   catch (e) { return []; }
 }
-function saveLinks(arr) { localStorage.setItem('bigtd_links_v1', JSON.stringify(arr)); }
+function saveLinks(arr) { localStorage.setItem('bigtd_links_v1', JSON.stringify(arr)); queueSync(); }
 
 function renderLinksCard() {
   const wrap = document.getElementById('links-wrap');
@@ -1591,6 +1646,8 @@ function removeLembrete(id) {
   requestNotifPermission();
   checkReminders();
   setInterval(checkReminders, 30000);
+  setInterval(pullSync, 20000);
+  window.addEventListener('focus', pullSync);
 })();
 </script>
 </body>
