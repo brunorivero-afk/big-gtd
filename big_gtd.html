@@ -71,6 +71,25 @@ body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--
 /* KANBAN */
 #view-kanban{display:flex;gap:10px;padding:14px 14px 24px;overflow-x:auto;align-items:flex-start;min-height:calc(100vh - 90px);}
 .kcol{flex:1 1 0;min-width:200px;background:var(--raised);border:1px solid var(--brd);border-radius:7px;transition:border-color .15s,background .15s;overflow:hidden;}
+.kanban-tabs{display:none;}
+@media(max-width:640px){
+  .kanban-tabs{display:flex;gap:6px;overflow-x:auto;padding:10px 14px 0;flex-shrink:0;}
+  .kanban-tabs::-webkit-scrollbar{display:none;}
+  .ktab{flex-shrink:0;font-size:12px;font-weight:600;padding:7px 13px;border-radius:20px;color:var(--t2);border:1px solid var(--brd);background:var(--surf);cursor:pointer;white-space:nowrap;transition:background .12s,border-color .12s,color .12s;}
+  .ktab.active{background:var(--acc);color:#fff;border-color:var(--acc);}
+  #view-kanban{overflow-x:hidden;}
+  #view-kanban .kcol{display:none;width:100%;min-width:0;}
+  #view-kanban .kcol.mobile-active{display:flex;}
+  .hdr{padding:0 10px;gap:6px;}
+  .hdr-stats{display:none;}
+  .logo{flex-shrink:0;}
+  .nav-group{overflow-x:auto;-webkit-overflow-scrolling:touch;min-width:0;flex:1;}
+  .nav-group::-webkit-scrollbar{display:none;}
+  .nav-btn{padding:6px 9px;font-size:10px;flex-shrink:0;}
+  .legend-items{display:none;}
+  .legend{padding:6px 10px;}
+  .row2{grid-template-columns:1fr;}
+}
 .kcol.drag-over{border-color:var(--acc);background:var(--acc-dim);}
 .kch{display:flex;align-items:center;justify-content:space-between;padding:10px 11px 9px;border-bottom:1px solid var(--brd);}
 .kct{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--t2);}
@@ -471,6 +490,7 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:2px;}
   <button class="btn-n" onclick="openModal(null,'hoje')">＋ Nova tarefa</button>
 </div>
 
+<div class="kanban-tabs" id="kanban-tabs"></div>
 <div id="view-kanban"></div>
 
 <div id="view-foco" class="g-hidden">
@@ -980,19 +1000,22 @@ function colHTML(col, filt) {
 }
 
 const NOTES_HTML = `
-    <div class="kcol">
+    <div class="kcol" data-col="notas">
       <div class="kch"><div class="kct">Notas &amp; Ideias</div></div>
       <div class="notes-wrap" id="notes-wrap"></div>
     </div>`;
 
 const SIDE_HTML = `
-    <div class="kcol">
+    <div class="kcol" data-col="clima">
       <div class="kch"><div class="kct">Clima &amp; Links</div></div>
       <div class="side-wrap">
         <div id="weather-wrap"></div>
         <div id="links-wrap"></div>
       </div>
     </div>`;
+
+const MOBILE_EXTRA_COLS = [{key:'notas',label:'Notas'},{key:'clima',label:'Clima'}];
+let mobileActiveCol = 'hoje';
 
 function renderKanban() {
   const filt = activeFilter==='all' ? tasks : tasks.filter(t=>t.cat===activeFilter);
@@ -1001,6 +1024,26 @@ function renderKanban() {
   renderNotesCard();
   renderWeatherCard();
   renderLinksCard();
+  renderKanbanTabs();
+}
+
+function renderKanbanTabs() {
+  const all = [...COLS, ...MOBILE_EXTRA_COLS];
+  if (!all.some(c => c.key === mobileActiveCol)) mobileActiveCol = all[0].key;
+  document.getElementById('kanban-tabs').innerHTML = all.map(c =>
+    `<button class="ktab${c.key===mobileActiveCol?' active':''}" data-key="${esc(c.key)}" onclick="setMobileCol('${esc(c.key)}')">${esc(c.label)}</button>`
+  ).join('');
+  applyMobileActiveCol();
+}
+
+function applyMobileActiveCol() {
+  document.querySelectorAll('#view-kanban .kcol').forEach(el => el.classList.toggle('mobile-active', el.dataset.col === mobileActiveCol));
+}
+
+function setMobileCol(key) {
+  mobileActiveCol = key;
+  document.querySelectorAll('.ktab').forEach(b => b.classList.toggle('active', b.dataset.key === key));
+  applyMobileActiveCol();
 }
 
 // ── NOTES ─────────────────────────────────────────────────────────────
