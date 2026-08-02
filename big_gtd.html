@@ -151,14 +151,12 @@ body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--
 .card{background:var(--surf);border:1px solid var(--brd);border-left:3px solid var(--com);border-radius:var(--r);padding:6px 8px 5px;margin-bottom:5px;cursor:pointer;position:relative;transition:border-color .12s,box-shadow .12s,transform .1s;user-select:none;height:114px;display:flex;flex-direction:column;}
 .card[data-cat="p"]{border-left-color:var(--per);}
 .card:hover{border-color:var(--brd-hi);box-shadow:0 3px 12px rgba(0,0,0,.2);transform:translateY(-1px);}
-.card.done{opacity:.38;}
 .card.dragging{opacity:.3;transform:rotate(1.5deg);}
 .card-body{flex:1 1 0;min-height:0;overflow:hidden;}
 .ctop{display:flex;align-items:flex-start;gap:6px;margin-bottom:4px;}
 .pdot{width:7px;height:7px;border-radius:50%;background:var(--ph);flex-shrink:0;margin-top:4px;}
 .pdot.m{background:var(--pm);}.pdot.l{background:var(--pl);}.pdot.d{background:var(--t3);}
 .ctit{font-size:12px;font-weight:500;color:var(--t1);line-height:1.25;flex:1;padding-right:8px;word-break:break-word;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
-.card.done .ctit{text-decoration:line-through;color:var(--t3);}
 .cmeta{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:4px;overflow:hidden;max-height:18px;}
 .chip{font-size:9px;font-weight:700;letter-spacing:.05em;border-radius:3px;padding:2px 5px;text-transform:uppercase;}
 .ch-c{color:var(--com);background:rgba(255,107,61,.11);}
@@ -184,8 +182,6 @@ body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--
 .dgr{position:absolute;top:9px;right:9px;display:flex;flex-direction:column;gap:2px;opacity:0;transition:opacity .12s;pointer-events:none;}
 .card:hover .dgr{opacity:.22;}
 .dgr span{display:block;width:11px;height:1.5px;background:var(--t2);border-radius:1px;}
-.btn-renew{display:flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:var(--rec);background:rgba(168,85,200,.12);border:1px solid rgba(168,85,200,.22);border-radius:3px;padding:3px 7px;cursor:pointer;margin-top:6px;transition:background .12s;width:fit-content;}
-.btn-renew:hover{background:rgba(168,85,200,.22);}
 
 /* SHARED VIEW WRAPPER */
 .v-wrap{padding:18px 16px 32px;max-width:760px;}
@@ -657,7 +653,7 @@ const _sb = supabase.createClient(CFG.supabaseUrl, CFG.supabaseKey);
 let _sbUser = null;
 
 // ── CONSTANTS ─────────────────────────────────────────────────────────
-const COLS     = [{key:'hoje',label:'Hoje'},{key:'semana',label:'Esta Semana'},{key:'concluido',label:'Concluído'}];
+const COLS     = [{key:'hoje',label:'Foco'},{key:'semana',label:'TO DO'}];
 const PRI_ORD  = {h:0,m:1,l:2};
 const COL_LIMIT= 6;
 
@@ -950,22 +946,19 @@ function render() { renderKanban(); renderStats(); updateInboxBadge(); updateLem
 
 // ── KANBAN ────────────────────────────────────────────────────────────
 function dotCls(t) {
-  if(t.col==='concluido') return 'pdot d';
   return t.pri==='m'?'pdot m':t.pri==='l'?'pdot l':'pdot';
 }
 
 function cardHTML(t) {
-  const done   = t.col==='concluido';
   const hasFoot= t.person||t.due;
-  const renew  = done&&t.rec ? `<button class="btn-renew" onclick="renewTask(event,'${esc(t.id)}')">↻ Renovar para Hoje</button>` : '';
   const acts = `
     <div class="card-acts">
-      ${!done ? `<button class="cact cact-ok" onclick="quickComplete(event,'${esc(t.id)}')">✓ Concluir</button>` : ''}
-      ${!done && t.col==='hoje' ? `<button class="cact cact-def" onclick="quickDefer(event,'${esc(t.id)}')">↪ Adiar</button>` : ''}
+      <button class="cact cact-ok" onclick="quickComplete(event,'${esc(t.id)}')">✓ Concluir</button>
+      ${t.col==='hoje' ? `<button class="cact cact-def" onclick="quickDefer(event,'${esc(t.id)}')">↪ Adiar</button>` : ''}
       <button class="cact cact-del" onclick="quickDelete(event,'${esc(t.id)}')">✕</button>
     </div>`;
   return `
-  <div class="card${done?' done':''}" data-id="${esc(t.id)}" data-cat="${esc(t.cat)}"
+  <div class="card" data-id="${esc(t.id)}" data-cat="${esc(t.cat)}"
        draggable="true" onclick="openModal('${esc(t.id)}')"
        ondragstart="onDragStart(event,'${esc(t.id)}')" ondragend="onDragEnd()">
     <div class="card-body">
@@ -982,7 +975,6 @@ function cardHTML(t) {
       </div>
       ${hasFoot?`<div class="cfot"><div class="cpersn">${av(t.person)}<span>${esc(t.person||'')}</span></div><div class="cdue">${fmtDate(t.due)}</div></div>`:''}
       ${t.link?`<a class="card-link" href="${esc(t.link)}" target="_blank" onclick="event.stopPropagation()">🔗 Ver link</a>`:''}
-      ${renew}
     </div>
     ${acts}
     <div class="dgr"><span></span><span></span><span></span></div>
@@ -1449,24 +1441,22 @@ function resetExtForm() {
 function quickComplete(e,id) {
   e.stopPropagation();
   const t=tasks.find(t=>t.id===id); if(!t) return;
+  const isRec = !!t.rec;
   t.col='concluido'; t.completedAt=new Date().toISOString();
-  saveData(); render(); if(currentView==='foco') renderFoco(); toast('✓ Concluída');
+  if (isRec) tasks.push({...t, id:uid(), col:'hoje', completedAt:'', lembreteOk:false});
+  saveData(); render(); if(currentView==='foco') renderFoco();
+  toast(isRec ? '✓ Concluída — renovada pra Foco' : '✓ Concluída');
 }
 function quickDefer(e,id) {
   e.stopPropagation();
   const t=tasks.find(t=>t.id===id); if(!t) return;
-  t.col='semana'; saveData(); render(); if(currentView==='foco') renderFoco(); toast('↪ Adiada para Esta Semana');
+  t.col='semana'; saveData(); render(); if(currentView==='foco') renderFoco(); toast('↪ Adiada para TO DO');
 }
 function quickDelete(e,id) {
   e.stopPropagation();
   if (!confirm('Excluir esta tarefa?')) return;
   tasks = tasks.filter(t=>t.id!==id);
   saveData(); render(); if(currentView==='foco') renderFoco(); toast('Tarefa excluída');
-}
-function renewTask(e,id) {
-  e.stopPropagation();
-  const t=tasks.find(t=>t.id===id);
-  if(t){t.col='hoje';t.completedAt='';saveData();render();toast('↻ Renovada para Hoje');}
 }
 
 // ── DRAG & DROP ───────────────────────────────────────────────────────
