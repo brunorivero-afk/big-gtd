@@ -1056,7 +1056,8 @@ const MOBILE_EXTRA_COLS = [{key:'notas',label:'Notas'},{key:'clima',label:'Clima
 let mobileActiveCol = 'hoje';
 
 function renderKanban() {
-  const filt = activeFilter==='all' ? tasks : tasks.filter(t=>t.cat===activeFilter);
+  const noBoard = tasks.filter(t=>t.person!=='Sistema Financeiro');
+  const filt = activeFilter==='all' ? noBoard : noBoard.filter(t=>t.cat===activeFilter);
   document.getElementById('view-kanban').innerHTML =
     COLS.map(c=>colHTML(c,filt)).join('') + NOTES_HTML + SIDE_HTML + CAL_HTML;
   renderNotesCard();
@@ -1336,7 +1337,7 @@ function renderBills() {
 // ── FOCO ──────────────────────────────────────────────────────────────
 function renderFoco() {
   const el   = document.getElementById('foco-body');
-  const hoje = sortByPri(tasks.filter(t=>t.col==='hoje'));
+  const hoje = sortByPri(tasks.filter(t=>t.col==='hoje'&&t.person!=='Sistema Financeiro'));
   const hdr  = `<div class="foco-top"><div class="v-title">☀ Foco do Dia</div><div class="foco-date">${todayLabel()}</div></div>`;
   if (!hoje.length) { el.innerHTML=hdr+'<div class="empty-v">Sem tarefas para hoje. Bom trabalho!</div>'; return; }
 
