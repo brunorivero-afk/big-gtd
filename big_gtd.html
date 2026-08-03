@@ -62,7 +62,7 @@ body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--
 .lsep{color:var(--brd-hi);}
 
 /* THIN TOUCH-STYLE SCROLLBARS */
-#view-kanban,.note-card,.notes-modal-textarea,.links-list,.cal-tasklist{scrollbar-width:thin;scrollbar-color:var(--brd-hi) transparent;}
+#view-kanban,.note-card,.notes-modal-textarea,.links-list,.cal-tasklist,#cal-bills{scrollbar-width:thin;scrollbar-color:var(--brd-hi) transparent;}
 #view-kanban::-webkit-scrollbar,.note-card::-webkit-scrollbar,.notes-modal-textarea::-webkit-scrollbar{width:5px;height:5px;}
 #view-kanban::-webkit-scrollbar-track,.note-card::-webkit-scrollbar-track,.notes-modal-textarea::-webkit-scrollbar-track{background:transparent;}
 #view-kanban::-webkit-scrollbar-thumb,.note-card::-webkit-scrollbar-thumb,.notes-modal-textarea::-webkit-scrollbar-thumb{background:var(--brd-hi);border-radius:10px;}
@@ -148,7 +148,7 @@ body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--
 .notes-tbtn.ntb-u{text-decoration:underline;}
 
 /* CALENDAR COLUMN */
-.cal-wrap{padding:9px;display:flex;flex-direction:column;gap:8px;flex:1;min-height:0;}
+.cal-wrap{padding:9px;display:flex;flex-direction:column;gap:8px;flex-shrink:0;}
 .cal-nav{display:flex;align-items:center;justify-content:space-between;font-size:11px;font-weight:700;color:var(--t1);text-transform:capitalize;flex-shrink:0;}
 .cal-nav-btn{background:none;border:1px solid var(--brd);border-radius:4px;color:var(--t2);width:22px;height:22px;cursor:pointer;font-size:12px;line-height:1;transition:border-color .12s,color .12s;}
 .cal-nav-btn:hover{border-color:var(--acc);color:var(--acc);}
@@ -162,8 +162,19 @@ body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--
 .cal-dot{position:absolute;bottom:2px;width:4px;height:4px;border-radius:50%;background:var(--acc);}
 .cal-day.selected .cal-dot{background:#fff;}
 .cal-sel-label{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);padding-top:4px;border-top:1px solid var(--brd);flex-shrink:0;}
-.cal-tasklist{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:4px;}
+.cal-tasklist{max-height:140px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;}
 .cal-empty{color:var(--t3);font-size:11px;font-style:italic;padding:6px 0;}
+
+.cal-bills-wrap{padding:0 9px 9px;display:flex;flex-direction:column;flex:1;min-height:0;}
+.cal-bills-title{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);padding:8px 0 6px;border-top:1px solid var(--brd);flex-shrink:0;}
+#cal-bills{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:4px;}
+.bill-row{display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--surf);border:1px solid var(--brd);border-radius:var(--r);cursor:pointer;transition:border-color .12s;}
+.bill-row:hover{border-color:var(--brd-hi);}
+.bill-date{font-size:10px;font-weight:700;color:var(--pm);flex-shrink:0;white-space:nowrap;}
+.bill-title{flex:1;font-size:12px;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.bill-link{color:var(--acc);text-decoration:none;font-size:12px;flex-shrink:0;}
+.bill-link:hover{text-decoration:underline;}
+.cal-bills-empty{color:var(--t3);font-size:11px;font-style:italic;padding:6px 0;}
 
 /* CARD */
 .card{background:var(--surf);border:1px solid var(--brd);border-left:3px solid var(--com);border-radius:var(--r);padding:6px 8px 5px;margin-bottom:5px;cursor:pointer;position:relative;transition:border-color .12s,box-shadow .12s,transform .1s;user-select:none;height:114px;display:flex;flex-direction:column;}
@@ -1035,6 +1046,10 @@ const CAL_HTML = `
     <div class="kcol" data-col="calendario">
       <div class="kch"><div class="kct">📅 Calendário</div></div>
       <div class="cal-wrap" id="cal-wrap"></div>
+      <div class="cal-bills-wrap">
+        <div class="cal-bills-title">💳 Contas a pagar</div>
+        <div id="cal-bills"></div>
+      </div>
     </div>`;
 
 const MOBILE_EXTRA_COLS = [{key:'notas',label:'Notas'},{key:'clima',label:'Clima'},{key:'calendario',label:'Calendário'}];
@@ -1048,6 +1063,7 @@ function renderKanban() {
   renderWeatherCard();
   renderLinksCard();
   renderCalendar();
+  renderBills();
   renderKanbanTabs();
 }
 
@@ -1301,6 +1317,22 @@ function renderCalendar() {
     ${selHTML}`;
 }
 
+function renderBills() {
+  const el = document.getElementById('cal-bills');
+  if (!el) return;
+  const bills = tasks
+    .filter(t => t.person === 'Sistema Financeiro' && t.col !== 'concluido')
+    .sort((a,b) => (a.due||a.quando||'').localeCompare(b.due||b.quando||''));
+  el.innerHTML = bills.length
+    ? bills.map(t => `
+      <div class="bill-row" onclick="openModal('${esc(t.id)}')">
+        <div class="bill-date">${esc(fmtDate(t.due||t.quando))}</div>
+        <div class="bill-title">${esc(t.title)}</div>
+        ${t.link ? `<a class="bill-link" href="${esc(t.link)}" target="_blank" onclick="event.stopPropagation()" title="Abrir link">↗</a>` : ''}
+      </div>`).join('')
+    : '<div class="cal-bills-empty">Nenhuma conta pendente.</div>';
+}
+
 // ── FOCO ──────────────────────────────────────────────────────────────
 function renderFoco() {
   const el   = document.getElementById('foco-body');
@@ -1365,7 +1397,8 @@ function renderInbox() {
 function acceptInbox(id) {
   const item=inboxItems.find(i=>i.id===id); if(!item) return;
   activeInboxId=id;
-  openModal(null,'hoje',{title:item.title,person:item.from,due:item.due,cat:'p',pri:'m',source:`De ${item.from}`});
+  const isFinance = item.from === 'Sistema Financeiro';
+  openModal(null,'hoje',{title:item.title,person:item.from,due:item.due,cat:'p',pri:'m',source:`De ${item.from}`,quando:isFinance?item.due:undefined});
 }
 async function rejectInbox(id) {
   const item=inboxItems.find(i=>i.id===id); if(!item) return;
@@ -1589,7 +1622,7 @@ function openModal(id=null,defaultCol='hoje',prefill=null){
   document.getElementById('modal-source').textContent=prefill?.source||'';
   document.getElementById('f-title').value =t?t.title :(prefill?.title ||'');
   document.getElementById('f-desc').value  =t?(t.desc||''):(prefill?.desc||'');
-  document.getElementById('f-quando').value=t?(t.quando||colToDate(t.col)):colToDate(defaultCol);
+  document.getElementById('f-quando').value=t?(t.quando||colToDate(t.col)):(prefill?.quando||colToDate(defaultCol));
   document.getElementById('f-due').value   =t?(t.due||''):(prefill?.due||'');
   document.getElementById('f-person').value=t?t.person:(prefill?.person||'');
   document.getElementById('f-rec').value   =t?t.rec   :'';
