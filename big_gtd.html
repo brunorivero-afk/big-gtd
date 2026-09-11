@@ -161,8 +161,8 @@ body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--
 .notes-tbtn.ntb-u{text-decoration:underline;}
 
 /* EISENHOWER — seletor de quadrante + cor por quadrante nos cards */
-.seg-eis{flex-direction:column;}
-.seg-eis .seg-btn{text-align:left;padding:8px 10px;font-weight:600;}
+.seg.seg-eis{display:grid;grid-template-columns:1fr 1fr;gap:4px;}
+.seg-eis .seg-btn{text-align:left;padding:6px 8px;font-size:10px;font-weight:600;line-height:1.25;}
 .seg-btn.seg-on-ui{background:rgba(242,72,60,.14);border-color:var(--ph);color:var(--ph);}
 .seg-btn.seg-on-i{background:rgba(245,158,11,.13);border-color:var(--pm);color:var(--pm);}
 .seg-btn.seg-on-u{background:rgba(52,211,153,.12);border-color:var(--pl);color:var(--pl);}
@@ -593,7 +593,6 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:2px;}
         <textarea id="f-desc" placeholder="Detalhes, contexto..." rows="3"></textarea>
       </div>
       <div class="field">
-        <label>Quadrante (urgência × importância)</label>
         <div class="seg seg-eis" id="seg-eis">
           <button class="seg-btn" data-v="ui" onclick="setSeg('eis','ui')">🔴 Urgente e importante</button>
           <button class="seg-btn" data-v="i"  onclick="setSeg('eis','i')">🟡 Importante</button>
@@ -613,15 +612,6 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:2px;}
           <label>Deadline</label>
           <input type="date" id="f-due">
         </div>
-      </div>
-      <div class="field">
-        <label>Recorrência</label>
-        <select id="f-rec">
-          <option value="">Sem recorrência</option>
-          <option value="diária">Diária</option>
-          <option value="semanal">Semanal</option>
-          <option value="mensal">Mensal</option>
-        </select>
       </div>
       <div class="field">
         <label>Link (opcional)</label>
@@ -684,7 +674,7 @@ const _sb = supabase.createClient(CFG.supabaseUrl, CFG.supabaseKey);
 let _sbUser = null;
 
 // ── CONSTANTS ─────────────────────────────────────────────────────────
-const COLS     = [{key:'foco',label:'Foco'},{key:'nn',label:'Nem urgente, nem importante',short:'Nem/nem'}];
+const COLS     = [{key:'foco',label:'GTD'},{key:'nn',label:'Nem urgente, nem importante',short:'Nem/nem'}];
 const EIS_ORD  = {ui:0,i:1,u:2,nn:3};
 const COL_LIMIT= 6;
 
@@ -1624,7 +1614,6 @@ function openModal(id=null,defaultCol='foco',prefill=null){
   document.getElementById('f-title').value =t?t.title :(prefill?.title ||'');
   document.getElementById('f-desc').value  =t?(t.desc||''):(prefill?.desc||'');
   document.getElementById('f-due').value   =t?(t.due||''):(prefill?.due||'');
-  document.getElementById('f-rec').value   =t?(t.rec||'') :'';
   document.getElementById('f-link').value  =t?(t.link||''):'';
   const lemVal = t&&t.lembrete ? t.lembrete.slice(0,16) : '';
   document.getElementById('f-lembrete').value = lemVal;
@@ -1661,7 +1650,6 @@ function getFormData(){
     cat:formCat, eis:formEis,
     col:    '',
     due:    document.getElementById('f-due').value,
-    rec:    document.getElementById('f-rec').value,
     link:   document.getElementById('f-link').value.trim(),
     lembrete: document.getElementById('f-lembrete').value || '',
     origin: activeInboxId?'external':'',
