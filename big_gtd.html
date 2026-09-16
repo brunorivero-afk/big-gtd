@@ -92,16 +92,14 @@ body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--
   .ktab.active{background:var(--acc);color:#fff;border-color:var(--acc);}
   #view-kanban{overflow-x:hidden;}
   #view-kanban .kcol{display:none;width:100%;min-width:0;}
-  #view-kanban .kcol.mobile-active{display:flex;}
-  #view-kanban.mobile-board{gap:6px;}
-  #view-kanban.mobile-board .kcol.mobile-active{width:auto;flex:1 1 0;min-width:0;}
-  #view-kanban.mobile-board .kch{padding:8px 7px 7px;}
-  #view-kanban.mobile-board .kct{font-size:9px;}
-  #view-kanban.mobile-board .cards-area{padding:7px 6px 2px;}
-  #view-kanban.mobile-board .card{padding:6px 6px 4px;}
-  #view-kanban.mobile-board .ctit{font-size:11px;}
-  #view-kanban.mobile-board .card-acts{font-size:9px;}
-  #view-kanban.mobile-board .cact{font-size:9px;padding:5px 2px;}
+  #view-kanban .kcol.mobile-active{display:flex;flex-direction:column;}
+  /* GTD em grade 2 colunas só pra aproveitar a largura — N/N continua em aba própria, cheia */
+  #view-kanban .kcol[data-col="foco"].mobile-active .cards-area{display:grid;grid-template-columns:1fr 1fr;gap:6px;align-content:start;}
+  #view-kanban .kcol[data-col="foco"].mobile-active .cards-area .empty-col{grid-column:1/-1;}
+  #view-kanban .kcol[data-col="foco"].mobile-active .card{padding:6px 6px 4px;margin-bottom:0;}
+  #view-kanban .kcol[data-col="foco"].mobile-active .ctit{font-size:11px;}
+  #view-kanban .kcol[data-col="foco"].mobile-active .card-acts{gap:3px;}
+  #view-kanban .kcol[data-col="foco"].mobile-active .cact{font-size:9px;padding:5px 2px;}
   .hdr{padding:0 10px;gap:6px;}
   .hdr-stats{display:none;}
   .logo{flex-shrink:0;}
@@ -1054,15 +1052,14 @@ const CAL_HTML = `
       </div>
     </div>`;
 
-// No celular, GTD + Nem/nem aparecem juntos, lado a lado, numa única aba —
-// dá pra arrastar um card entre as duas sem trocar de aba.
 const MOBILE_TABS = [
-  {key:'board',      label:'GTD',          short:'GTD',        cols:['foco','nn']},
+  {key:'foco',       label:'GTD',          short:'GTD',        cols:['foco']},
+  {key:'nn',         label:'Nem/nem',      short:'N/N',        cols:['nn']},
   {key:'notas',      label:'Notas',                            cols:['notas']},
   {key:'clima',      label:'Clima',                            cols:['clima']},
   {key:'calendario', label:'Calendário',                       cols:['calendario']},
 ];
-let mobileActiveCol = 'board';
+let mobileActiveCol = 'foco';
 
 function renderKanban() {
   const noBoard = tasks.filter(t=>t.person!=='Sistema Financeiro');
@@ -1088,7 +1085,6 @@ function renderKanbanTabs() {
 function applyMobileActiveCol() {
   const tab = MOBILE_TABS.find(c => c.key === mobileActiveCol) || MOBILE_TABS[0];
   document.querySelectorAll('#view-kanban .kcol').forEach(el => el.classList.toggle('mobile-active', tab.cols.includes(el.dataset.col)));
-  document.getElementById('view-kanban').classList.toggle('mobile-board', mobileActiveCol === 'board');
 }
 
 function setMobileCol(key) {
