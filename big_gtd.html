@@ -93,6 +93,15 @@ body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--
   #view-kanban{overflow-x:hidden;}
   #view-kanban .kcol{display:none;width:100%;min-width:0;}
   #view-kanban .kcol.mobile-active{display:flex;}
+  #view-kanban.mobile-board{gap:6px;}
+  #view-kanban.mobile-board .kcol.mobile-active{width:auto;flex:1 1 0;min-width:0;}
+  #view-kanban.mobile-board .kch{padding:8px 7px 7px;}
+  #view-kanban.mobile-board .kct{font-size:9px;}
+  #view-kanban.mobile-board .cards-area{padding:7px 6px 2px;}
+  #view-kanban.mobile-board .card{padding:6px 6px 4px;}
+  #view-kanban.mobile-board .ctit{font-size:11px;}
+  #view-kanban.mobile-board .card-acts{font-size:9px;}
+  #view-kanban.mobile-board .cact{font-size:9px;padding:5px 2px;}
   .hdr{padding:0 10px;gap:6px;}
   .hdr-stats{display:none;}
   .logo{flex-shrink:0;}
@@ -198,7 +207,7 @@ body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--
 .cal-bills-empty{color:var(--t3);font-size:11px;font-style:italic;padding:6px 0;}
 
 /* CARD */
-.card{background:var(--surf);border:1px solid var(--brd);border-left:3px solid var(--com);border-radius:var(--r);padding:6px 8px 5px;margin-bottom:5px;cursor:pointer;position:relative;transition:border-color .12s,box-shadow .12s,transform .1s;user-select:none;height:114px;display:flex;flex-direction:column;}
+.card{background:var(--surf);border:1px solid var(--brd);border-left:3px solid var(--com);border-radius:var(--r);padding:6px 8px 5px;margin-bottom:5px;cursor:pointer;position:relative;transition:border-color .12s,box-shadow .12s,transform .1s;user-select:none;touch-action:pan-y;height:114px;display:flex;flex-direction:column;}
 .card[data-cat="p"]{border-left-color:var(--per);}
 .card[data-eis="ui"]{border-left-color:var(--ph);}
 .card[data-eis="i"]{border-left-color:var(--pm);}
@@ -210,6 +219,13 @@ body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--
 .ctop{display:flex;align-items:flex-start;gap:6px;margin-bottom:4px;}
 .pdot{width:7px;height:7px;border-radius:50%;background:var(--ph);flex-shrink:0;margin-top:4px;}
 .pdot.m{background:var(--pm);}.pdot.l{background:var(--pl);}.pdot.d{background:var(--t3);}
+.pdot.ui{width:10px;height:10px;margin-top:2.5px;box-shadow:0 0 0 0 rgba(242,72,60,.6);animation:pdot-pulse 1.6s ease-out infinite;}
+@keyframes pdot-pulse{
+  0%  {box-shadow:0 0 0 0 rgba(242,72,60,.55);}
+  70% {box-shadow:0 0 0 6px rgba(242,72,60,0);}
+  100%{box-shadow:0 0 0 0 rgba(242,72,60,0);}
+}
+@media(prefers-reduced-motion:reduce){.pdot.ui{animation:none;}}
 .ctit{font-size:12px;font-weight:500;color:var(--t1);line-height:1.25;flex:1;padding-right:8px;word-break:break-word;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
 .cmeta{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:4px;overflow:hidden;max-height:18px;}
 .chip{font-size:9px;font-weight:700;letter-spacing:.05em;border-radius:3px;padding:2px 5px;text-transform:uppercase;}
@@ -683,7 +699,7 @@ let tasks=[], inboxItems=[];
 let activeFilter='all', currentView='kanban';
 let editId=null, activeInboxId=null;
 let formCat='c', formEis='i';
-let dragId=null, expandedCols=new Set();
+let expandedCols=new Set();
 
 // ── PERSISTENCE ───────────────────────────────────────────────────────
 function saveData() {
@@ -962,7 +978,7 @@ function render() { renderKanban(); renderStats(); updateInboxBadge(); updateLem
 
 // ── KANBAN ────────────────────────────────────────────────────────────
 function dotCls(t) {
-  return t.eis==='i'?'pdot m':t.eis==='u'?'pdot l':t.eis==='nn'?'pdot d':'pdot';
+  return t.eis==='i'?'pdot m':t.eis==='u'?'pdot l':t.eis==='nn'?'pdot d':'pdot ui';
 }
 
 function cardHTML(t) {
@@ -975,8 +991,7 @@ function cardHTML(t) {
     </div>`;
   return `
   <div class="card" data-id="${esc(t.id)}" data-cat="${esc(t.cat)}" data-eis="${esc(t.eis||'i')}"
-       draggable="true" onclick="openModal('${esc(t.id)}')"
-       ondragstart="onDragStart(event,'${esc(t.id)}')" ondragend="onDragEnd()">
+       onclick="cardClick(event,'${esc(t.id)}')" onpointerdown="cardPointerDown(event,'${esc(t.id)}')">
     <div class="card-body">
       <div class="ctop">
         <div class="${dotCls(t)}"></div>
@@ -1006,8 +1021,7 @@ function colHTML(col, filt) {
   const more    = !exp && hidden>0
     ? `<div class="col-expand" onclick="expandCol('${col.key}')">＋ ${hidden} tarefa${hidden>1?'s':''}</div>` : '';
   return `
-  <div class="kcol" data-col="${col.key}"
-       ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event,'${col.key}')">
+  <div class="kcol" data-col="${col.key}">
     <div class="kch"><div class="kct">${col.label}</div><div class="kcn">${all.length}</div></div>
     <div class="cards-area">${visible.length?visible.map(cardHTML).join(''):'<div class="empty-col">Sem tarefas</div>'}</div>
     ${more}
@@ -1040,8 +1054,15 @@ const CAL_HTML = `
       </div>
     </div>`;
 
-const MOBILE_EXTRA_COLS = [{key:'notas',label:'Notas'},{key:'clima',label:'Clima'},{key:'calendario',label:'Calendário'}];
-let mobileActiveCol = 'foco';
+// No celular, GTD + Nem/nem aparecem juntos, lado a lado, numa única aba —
+// dá pra arrastar um card entre as duas sem trocar de aba.
+const MOBILE_TABS = [
+  {key:'board',      label:'GTD',          short:'GTD',        cols:['foco','nn']},
+  {key:'notas',      label:'Notas',                            cols:['notas']},
+  {key:'clima',      label:'Clima',                            cols:['clima']},
+  {key:'calendario', label:'Calendário',                       cols:['calendario']},
+];
+let mobileActiveCol = 'board';
 
 function renderKanban() {
   const noBoard = tasks.filter(t=>t.person!=='Sistema Financeiro');
@@ -1057,16 +1078,17 @@ function renderKanban() {
 }
 
 function renderKanbanTabs() {
-  const all = [...COLS, ...MOBILE_EXTRA_COLS];
-  if (!all.some(c => c.key === mobileActiveCol)) mobileActiveCol = all[0].key;
-  document.getElementById('kanban-tabs').innerHTML = all.map(c =>
+  if (!MOBILE_TABS.some(c => c.key === mobileActiveCol)) mobileActiveCol = MOBILE_TABS[0].key;
+  document.getElementById('kanban-tabs').innerHTML = MOBILE_TABS.map(c =>
     `<button class="ktab${c.key===mobileActiveCol?' active':''}" data-key="${esc(c.key)}" onclick="setMobileCol('${esc(c.key)}')">${esc(c.short||c.label)}</button>`
   ).join('');
   applyMobileActiveCol();
 }
 
 function applyMobileActiveCol() {
-  document.querySelectorAll('#view-kanban .kcol').forEach(el => el.classList.toggle('mobile-active', el.dataset.col === mobileActiveCol));
+  const tab = MOBILE_TABS.find(c => c.key === mobileActiveCol) || MOBILE_TABS[0];
+  document.querySelectorAll('#view-kanban .kcol').forEach(el => el.classList.toggle('mobile-active', tab.cols.includes(el.dataset.col)));
+  document.getElementById('view-kanban').classList.toggle('mobile-board', mobileActiveCol === 'board');
 }
 
 function setMobileCol(key) {
@@ -1582,27 +1604,99 @@ function quickDelete(e,id) {
   saveData(); render(); if(currentView==='foco') renderFoco(); toast('Tarefa excluída');
 }
 
-// ── DRAG & DROP ───────────────────────────────────────────────────────
-function onDragStart(e,id){
-  dragId=id; e.dataTransfer.effectAllowed='move';
-  setTimeout(()=>{const el=document.querySelector(`[data-id="${id}"]`);if(el)el.classList.add('dragging');},0);
+// ── DRAG & DROP (mouse no notebook, toque no celular — via Pointer Events) ──
+let dragState=null, suppressCardClick=false;
+const DRAG_THRESHOLD=8;
+
+function cardClick(e,id){
+  if (suppressCardClick) { suppressCardClick=false; return; }
+  openModal(id);
 }
-function onDragEnd(){
-  document.querySelectorAll('.card').forEach(c=>c.classList.remove('dragging'));
-  document.querySelectorAll('.kcol').forEach(c=>c.classList.remove('drag-over'));
-  dragId=null;
+
+function cardPointerDown(e,id){
+  if (e.pointerType==='mouse' && e.button!==0) return;
+  const card=e.currentTarget;
+  const rect=card.getBoundingClientRect();
+  dragState={
+    id, card,
+    startX:e.clientX, startY:e.clientY,
+    offX:e.clientX-rect.left, offY:e.clientY-rect.top,
+    w:rect.width, h:rect.height,
+    moved:false, cancelled:false, overCol:null,
+    pointerId:e.pointerId,
+  };
+  try{ card.setPointerCapture(e.pointerId); }catch(_){}
+  card.addEventListener('pointermove', onCardPointerMove);
+  card.addEventListener('pointerup', onCardPointerUp);
+  card.addEventListener('pointercancel', onCardPointerUp);
 }
-function onDragOver(e){e.preventDefault();e.dataTransfer.dropEffect='move';e.currentTarget.classList.add('drag-over');}
-function onDragLeave(e){if(!e.currentTarget.contains(e.relatedTarget))e.currentTarget.classList.remove('drag-over');}
-function onDrop(e,colKey){
-  e.preventDefault(); e.currentTarget.classList.remove('drag-over');
-  if(!dragId) return;
-  const t=tasks.find(t=>t.id===dragId);
-  if(t){
-    if(colKey==='nn' && t.eis!=='nn'){ t.eis='nn'; saveData(); render(); toast('Movida para "Nem urgente, nem importante"'); }
-    else if(colKey==='foco' && t.eis==='nn'){ t.eis='i'; saveData(); render(); toast('Movida para Foco (Importante)'); }
+
+function onCardPointerMove(e){
+  if (!dragState || dragState.pointerId!==e.pointerId || dragState.cancelled) return;
+  const dx=e.clientX-dragState.startX, dy=e.clientY-dragState.startY;
+  if (!dragState.moved){
+    if (Math.abs(dy)>Math.abs(dx) && Math.abs(dy)>DRAG_THRESHOLD){
+      dragState.cancelled=true; // gesto vertical — deixa a página rolar normalmente
+      return;
+    }
+    if (Math.abs(dx)<DRAG_THRESHOLD) return;
+    dragState.moved=true;
+    beginCardGhost();
   }
-  dragId=null;
+  e.preventDefault();
+  moveCardGhost(e.clientX,e.clientY);
+  updateCardDropTarget(e.clientX,e.clientY);
+}
+
+function beginCardGhost(){
+  const {card,w,h,startX,startY,offX,offY}=dragState;
+  const ghost=card.cloneNode(true);
+  ghost.className='card card-ghost';
+  ghost.style.position='fixed'; ghost.style.left='0'; ghost.style.top='0';
+  ghost.style.width=w+'px'; ghost.style.height=h+'px'; ghost.style.margin='0';
+  ghost.style.pointerEvents='none'; ghost.style.zIndex='500';
+  ghost.style.opacity='.92'; ghost.style.boxShadow='var(--shadow)';
+  ghost.style.transform=`translate(${startX-offX}px,${startY-offY}px) rotate(1.5deg)`;
+  document.body.appendChild(ghost);
+  dragState.ghost=ghost;
+  card.classList.add('dragging');
+}
+
+function moveCardGhost(x,y){
+  const {ghost,offX,offY}=dragState;
+  if (ghost) ghost.style.transform=`translate(${x-offX}px,${y-offY}px) rotate(1.5deg)`;
+}
+
+function updateCardDropTarget(x,y){
+  document.querySelectorAll('.kcol').forEach(c=>c.classList.remove('drag-over'));
+  const el=document.elementFromPoint(x,y);
+  const col=el && el.closest('.kcol');
+  if (col) col.classList.add('drag-over');
+  dragState.overCol = col ? col.dataset.col : null;
+}
+
+function onCardPointerUp(e){
+  if (!dragState || dragState.pointerId!==e.pointerId) return;
+  const {card,moved,overCol,id,ghost,cancelled}=dragState;
+  card.removeEventListener('pointermove', onCardPointerMove);
+  card.removeEventListener('pointerup', onCardPointerUp);
+  card.removeEventListener('pointercancel', onCardPointerUp);
+  document.querySelectorAll('.kcol').forEach(c=>c.classList.remove('drag-over'));
+  if (ghost) ghost.remove();
+  card.classList.remove('dragging');
+  if (moved && !cancelled){
+    suppressCardClick=true;
+    setTimeout(()=>{ suppressCardClick=false; },300);
+    if (e.type==='pointerup' && overCol) commitCardDrop(id,overCol);
+  }
+  dragState=null;
+}
+
+function commitCardDrop(id,colKey){
+  const t=tasks.find(t=>t.id===id);
+  if (!t) return;
+  if (colKey==='nn' && t.eis!=='nn'){ t.eis='nn'; saveData(); render(); toast('↪ Movida para "Nem urgente, nem importante"'); }
+  else if (colKey==='foco' && t.eis==='nn'){ t.eis='i'; saveData(); render(); toast('Movida para Foco (Importante)'); }
 }
 
 // ── MODAL ─────────────────────────────────────────────────────────────
